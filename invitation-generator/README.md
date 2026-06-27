@@ -1,27 +1,36 @@
-# Invitation generator (Beat 2)
+# Invitation generator
 
-Turns survey responses into a right-sized, grounded set of **conversation invitations** plus **people recommendations**, for Ben Roberts' Hybrid Conversation Toolkit inquiry.
+**The problem.** The inquiry gathered 16 people who want to explore better tools for online conversation. But 16 people can't have one good conversation — it has to split into a handful of smaller, focused ones. Someone has to decide *which* conversations are worth having and *who* belongs in each. Done by hand, or with a lazy prompt, you get generic buckets ("AI and community", "the future of dialogue") and you miss the interesting stuff.
 
-This is Beat 2 of the arc **EXPRESS → MAP → DROP INTO → HARVEST**: it maps the survey (EXPRESS) into the set of conversations people then opt into. Output is a **draft for human curation**, not a final answer — the point is to collaborate with Claude, not hand the decision to it.
+**What this does.** It reads every participant's survey answers — what draws them, their doubts, what they want to build, the methods they use — and proposes a small, right-sized set of *specific* conversations, each grounded in what people actually wrote, with recommended participants and archetypes of people worth inviting who aren't here yet.
+
+It deliberately goes past topic-clustering to include:
+
+- a real **tension** in the group — a genuine disagreement, named with its poles;
+- at least one **process** conversation about the inquiry itself (how to run it, what success looks like) — the kind a naive list always skips;
+- **relational** "who-should-meet-whom" pairings;
+- and **latent threads** — quiet signals only one or two people raised.
+
+**Example.** Instead of a bland "AI ethics" topic, a run produced *"Can we build with AI without feeding the machine that extracts us?"* — grounded in one person's words about extraction, another's question about data training, and a third's skepticism — with five suggested participants and a note on who to recruit.
+
+**It's a draft, not a verdict.** The AI does the legwork — reading, clustering, matchmaking — and hands the convener something to edit instead of a blank page. The human decides what matters.
+
+## How it fits the inquiry
+
+The inquiry runs as an arc: people **express** (a survey) → the responses are **mapped** into this set of conversations → people **drop into** the ones that pull them (each becomes a node on a Kumu map and a WhatsApp group) → each conversation **harvests** something worth keeping. This tool is the *map* step.
 
 ## What it produces
 
 For a survey CSV it writes (to `output/`):
 
-- `invitations-<date>.md` — readable brief: each invitation with its framing, what it's grounded in, recommended participants (+ why), and archetypes of people worth inviting who aren't here yet.
+- `invitations-<date>.md` — readable brief: each conversation with its framing, what it's grounded in, recommended participants (+ why), and archetypes worth inviting who aren't here yet.
 - `invitations-<date>.json` — the raw structured result.
 - `kumu-elements-<date>.csv` — `Engagement Node` rows for the Kumu Elements sheet.
 - `kumu-connections-<date>.csv` — `Person → Node` rows of type `Suggested` for the Kumu Connections sheet.
 
-## What the prompt asks for
+## The prompt
 
-The full prompt is in [`prompt.md`](./prompt.md) (edit it freely). In short, it pushes Claude past naive topic-clustering toward:
-
-- **Grounded** invitations traceable to specific things specific people said.
-- A **mix of conversation types**, not just content: `content`, `tension` (a real disagreement between participants), `process` (at least one conversation about the inquiry itself), and `relational` (who-meets-whom).
-- **Right-sizing** — enough to give choice, few enough not to fragment a small group.
-- **Latent threads**, not only the loudest interests.
-- People recommendations on **fit and complementarity**, plus archetypes to invite.
+The full prompt lives in [`prompt.md`](./prompt.md) — read and edit it freely; it's the heart of the tool. It's what pushes Claude past naive topic-clustering toward grounded, mixed-type, right-sized conversations with fit-and-complementarity matchmaking.
 
 ## Run it
 
@@ -29,7 +38,7 @@ The full prompt is in [`prompt.md`](./prompt.md) (edit it freely). In short, it 
 pip install -r requirements.txt
 export ANTHROPIC_API_KEY=...        # or put it in a .env file (see --env-file)
 
-# try the synthetic sample first
+# try the synthetic sample first (no real data needed)
 python generate.py --input sample-input.csv --num 4
 
 # real run
