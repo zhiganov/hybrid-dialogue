@@ -39,7 +39,7 @@ Single-column **specimen catalogue**, left-aligned, asymmetric. No cards, no car
 ## Components
 
 - **Kind tag** — pigment swatch + small-caps label.
-- **Opt-in control** — one "add to my list" toggle per entry; chosen entries get a soft highlight (never dim the rest). The note field appears only once an entry is chosen.
+- **Opt-in control** — one "add to my list" toggle per entry; chosen entries get a soft highlight (never dim the rest). One tap to add, no extra fields.
 - **Who might fit** — read-only list of suggested people (name + why). Not assignable; people self-select.
 - **Field-log footer** — sticky paper strip: running tally of your picks + export ("copy my list" / "as message"). No glassmorphism; solid paper + top rule.
 - **Browse by kind** — filter tags in the masthead, plus a "My list" filter.

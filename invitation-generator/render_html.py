@@ -78,7 +78,6 @@ def render_entries(invs):
             <h3 class="sublabel">Not yet in the collection</h3>
             <ul class="absent">{absent}</ul>
           </section>
-          <textarea class="note" rows="1" placeholder="Add a note (optional): what you'd bring, a question, a thought"></textarea>
         </div>
       </article>""")
     return "\n".join(out)
@@ -188,11 +187,6 @@ ul,ol{margin:0; padding:0; list-style:none}
 .absent li{color:var(--ink-soft); padding-left:1.2em; text-indent:-1.2em; margin:0 0 .45rem; max-width:60ch}
 .absent li::before{content:"+\\00a0"; color:var(--k); font-weight:700}
 
-.note{display:none; margin-top:1.3rem; width:100%; min-height:2.5rem; resize:vertical; font:inherit; font-size:.95rem;
-  color:var(--ink); background:var(--sheet); border:1px solid var(--rule); border-radius:2px; padding:.55rem .7rem}
-.entry[data-chosen] .note{display:block}
-.note::placeholder{color:var(--faint); font-style:italic}
-
 /* field-log footer (export) */
 .fieldlog{position:sticky; bottom:0; z-index:6; margin:2.5rem -1rem 0; padding:.85rem 1rem;
   background:var(--paper); border-top:1px solid var(--ink-soft);
@@ -267,7 +261,7 @@ JS = r"""
 
   cards.forEach(function(card){
     var id=card.id;
-    var st=state[id]||(state[id]={chosen:false,note:''});
+    var st=state[id]||(state[id]={chosen:false});
     var join=card.querySelector('.join');
     var label=join.querySelector('.jl');
     function paint(){
@@ -276,25 +270,22 @@ JS = r"""
     }
     paint();
     join.addEventListener('click',function(){ st.chosen=!st.chosen; paint(); save(); refresh(); });
-    var note=card.querySelector('.note');
-    note.value=st.note||'';
-    note.addEventListener('input',function(){ st.note=note.value; save(); });
   });
   refresh();
 
   function picks(){
     return cards.filter(function(c){return c.dataset.chosen;}).map(function(c){
-      return { title:c.querySelector('.title').textContent.trim(), type:c.dataset.type, note:(state[c.id].note||'').trim() };
+      return { title:c.querySelector('.title').textContent.trim(), type:c.dataset.type };
     });
   }
   function asMarkdown(p){
     var s='# My conversations — Hybrid Dialogue\n\n';
-    p.forEach(function(it){ s+='- **'+it.title+'**  ['+it.type+']'+(it.note?'  — '+it.note:'')+'\n'; });
+    p.forEach(function(it){ s+='- **'+it.title+'**  ['+it.type+']\n'; });
     return s;
   }
   function asMessage(p){
     var s="I'd like to join "+p.length+" of the conversations:\n";
-    p.forEach(function(it,i){ s+=(i+1)+'. '+it.title+(it.note?' ('+it.note+')':'')+'\n'; });
+    p.forEach(function(it,i){ s+=(i+1)+'. '+it.title+'\n'; });
     return s.trim();
   }
 
@@ -346,7 +337,7 @@ def build(data, model, date_str):
   <header class="masthead">
     <p class="kicker">Hybrid Dialogue &middot; a field catalogue</p>
     <h1>Six conversations,<br>drawn from sixteen voices</h1>
-    <p class="lede">A starting set, gathered from the survey. Each is grown from what people actually wrote, with who might join and who's not yet here. Mark the ones that pull you, add a note if you like, and copy your list to share.</p>
+    <p class="lede">A starting set, gathered from the survey. Each is grown from what people actually wrote, with who might join and who's not yet here. Mark the ones that pull you, and copy your list to share.</p>
     <p class="coll">""" + coll + """</p>
     <div class="browse">
       <span class="browse-label">Browse</span>
