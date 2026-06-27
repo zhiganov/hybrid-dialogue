@@ -4,6 +4,7 @@ node_modules/
 .next/
 .DS_Store
 
-# generated invitation artifacts (may contain participant names) and any real survey data
+# private source data (survey responses, voice notes — PII, never commit) and generated artifacts
+data/
 invitation-generator/output/
 *-elements-people*.csv
