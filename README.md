@@ -20,20 +20,11 @@ The inquiry runs as four beats:
 | [`invitation-generator/`](./invitation-generator/) | MAP | Reads the participant survey and proposes a right-sized, grounded set of conversation invitations + people recommendations, with Kumu-ready output | ✅ Built |
 | [`docs/plans/2026-06-27-node-room-design.md`](./docs/plans/2026-06-27-node-room-design.md) | DROP INTO | Spec for a small-group live "node room" with Claude as facilitator, replacing the bare per-conversation Google Doc | 📝 Spec |
 
-## Quick start — the invitation generator
+## The invitation generator
 
-It turns survey responses into conversations that go beyond the obvious topics: a genuine *tension* in the group, at least one *process* conversation about the inquiry itself, and *relational* "who-should-meet-whom" pairings — each grounded in what people actually wrote, with recommended participants and archetypes worth inviting.
+It turns survey responses into conversations that go beyond the obvious topics: a genuine *tension* in the group, at least one *process* conversation about the inquiry itself, and *relational* "who-should-meet-whom" pairings — each grounded in what people actually wrote, with recommended participants and archetypes worth inviting. The result is a readable brief plus Kumu-ready spreadsheets.
 
-```sh
-cd invitation-generator
-pip install -r requirements.txt
-export ANTHROPIC_API_KEY=...
-
-# try the synthetic sample first (no real data needed)
-python generate.py --input sample-input.csv --num 4
-```
-
-It writes a readable markdown brief, the raw JSON, and two Kumu CSVs (Engagement Node elements + Person→Node "Suggested" connections). The prompt lives in [`invitation-generator/prompt.md`](./invitation-generator/prompt.md) so you can read and edit it without touching code. Full details in its [README](./invitation-generator/README.md).
+**Most people never run this.** It's not an app participants install — one person comfortable with a terminal runs it once and shares the result; everyone else simply receives the set of conversations. If that's you, the [tool's README](./invitation-generator/README.md) has the steps and the editable prompt.
 
 ## Privacy
 

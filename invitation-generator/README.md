@@ -32,7 +32,9 @@ For a survey CSV it writes (to `output/`):
 
 The full prompt lives in [`prompt.md`](./prompt.md) — read and edit it freely; it's the heart of the tool. It's what pushes Claude past naive topic-clustering toward grounded, mixed-type, right-sized conversations with fit-and-complementarity matchmaking.
 
-## Run it
+## Running it yourself
+
+You probably don't need to. In practice one person comfortable with a terminal runs this once and shares the result — everyone else just receives the set of conversations and never touches the code. These steps are for that person, or for anyone who wants to adapt the tool.
 
 ```sh
 pip install -r requirements.txt
