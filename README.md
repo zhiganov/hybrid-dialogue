@@ -1,6 +1,6 @@
 # Hybrid Dialogue
 
-Open tools for **asynchronous and hybrid group conversation** — built for, and with, Ben Roberts' Hybrid Conversation Toolkit inquiry (July 2026).
+Open tools for **asynchronous and hybrid group conversation with AI** — built for Ben Roberts' Hybrid Conversation Toolkit inquiry (July 2026).
 
 Most async tools treat a conversation as a synchronous one stretched over time: contributions stack up by timestamp, and whoever arrives late can only append to the end. This inquiry asks what becomes possible when we design for what asynchronicity actually offers — and uses AI as an *amplifier* of human-to-human dialogue, not a replacement for it. The tools here are shaped in that spirit.
 
