@@ -33,16 +33,16 @@ Single-column **specimen catalogue**, left-aligned, asymmetric. No cards, no car
 
 - Each conversation is an **entry** in a two-part grid: a narrow left **label gutter** (accession number + kind tag + disposition control) and a main body (title, description, sub-sections).
 - Entries are separated by full-width warm rules and generous space — a running notebook, not boxed cards.
-- Sub-sections per entry: **Collected from** (the voices, as hanging-indent margin annotations), **Who fits** (a field checklist), **Not yet in the collection** (archetypes, set apart).
+- Sub-sections per entry: **Collected from** (the voices, as hanging-indent margin annotations), **Who might fit** (read-only suggestions), **Not yet in the collection** (archetypes, set apart).
 - Mobile: the gutter stacks above the body.
 
 ## Components
 
 - **Kind tag** — pigment swatch + small-caps label.
-- **Disposition control** — keep / maybe / cut as stamp toggles (keep = ink, maybe = ochre, cut = struck + dimmed entry).
-- **Field checklist** — person rows with a tick (unticked = dropped).
-- **Field-log footer** — sticky paper strip: running tally + "copy decisions" export (Markdown / prompt). No glassmorphism; solid paper + top rule.
-- **Browse by kind** — filter tags in the masthead.
+- **Opt-in control** — one "add to my list" toggle per entry; chosen entries get a soft highlight (never dim the rest). The note field appears only once an entry is chosen.
+- **Who might fit** — read-only list of suggested people (name + why). Not assignable; people self-select.
+- **Field-log footer** — sticky paper strip: running tally of your picks + export ("copy my list" / "as message"). No glassmorphism; solid paper + top rule.
+- **Browse by kind** — filter tags in the masthead, plus a "My list" filter.
 
 ## Motion
 

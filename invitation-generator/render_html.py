@@ -3,10 +3,12 @@
 Render the invitation-generator JSON into a single, navigable, interactive HTML page.
 
 Design: a naturalist's field catalogue (see DESIGN.md / PRODUCT.md) — warm paper,
-sepia ink, specimen entries with classification tags and margin annotations. Built
-to Thariq Shihipar's "HTML over Markdown" idea: a long brief doesn't get read or
-acted on, so this is navigable and "ends with an export" — the convener curates
-(keep / maybe / cut, drop people) and copies the decisions back out.
+sepia ink, specimen entries with classification tags and margin annotations.
+
+It's an artifact for the whole group, not just the convener. Following Thariq
+Shihipar's "HTML over Markdown" idea (a long brief doesn't get read or acted on),
+each reader marks the conversations that pull them and "ends with an export":
+copies their own picks to share or sign up.
 
 Reads the JSON that generate.py wrote; emits one self-contained HTML file (no build).
 
@@ -48,23 +50,18 @@ def render_entries(invs):
         t = inv.get("type", "content")
         meta = TYPES.get(t, TYPES["content"])
         voices = "".join(f"<li>{e(v)}</li>" for v in inv.get("grounded_in", []))
-        fits = "".join(
-            f'<li><label><input type="checkbox" class="pk" data-name="{e(p["name"])}" checked>'
-            f'<span class="who"><span class="nm">{e(p["name"])}</span>'
-            f'<span class="why">{e(p["why"])}</span></span></label></li>'
+        people = "".join(
+            f'<li><span class="nm">{e(p["name"])}</span> '
+            f'<span class="why">{e(p["why"])}</span></li>'
             for p in inv.get("recommended_participants", [])
         )
         absent = "".join(f"<li>{e(a)}</li>" for a in inv.get("archetypes_to_invite", []))
         out.append(f"""
-      <article class="entry" data-type="{t}" data-status="keep" id="c{i}" style="--k:{meta['color']}">
+      <article class="entry" data-type="{t}" id="c{i}" style="--k:{meta['color']}">
         <div class="gutter">
           <span class="acc">{i:02d}</span>
           <span class="tag"><span class="swatch"></span>{meta['label']}</span>
-          <div class="disp" role="radiogroup" aria-label="Decision for this conversation">
-            <button class="stamp" data-status="keep" role="radio" aria-checked="true">Keep</button>
-            <button class="stamp" data-status="maybe" role="radio" aria-checked="false">Maybe</button>
-            <button class="stamp" data-status="cut" role="radio" aria-checked="false">Cut</button>
-          </div>
+          <button class="join" aria-pressed="false"><span class="jl">Add to my list</span></button>
         </div>
         <div class="body">
           <h2 class="title">{e(inv.get('title',''))}</h2>
@@ -74,14 +71,14 @@ def render_entries(invs):
             <ul class="annot">{voices}</ul>
           </section>
           <section class="sub">
-            <h3 class="sublabel">Who fits <span class="hint">untick to drop</span></h3>
-            <ul class="checklist">{fits}</ul>
+            <h3 class="sublabel">Who might fit</h3>
+            <ul class="people">{people}</ul>
           </section>
           <section class="sub">
             <h3 class="sublabel">Not yet in the collection</h3>
             <ul class="absent">{absent}</ul>
           </section>
-          <textarea class="note" rows="1" placeholder="Margin note: merge with&hellip;, retitle, add someone&hellip;"></textarea>
+          <textarea class="note" rows="1" placeholder="Add a note (optional): what you'd bring, a question, a thought"></textarea>
         </div>
       </article>""")
     return "\n".join(out)
@@ -97,6 +94,8 @@ def render_browse(invs):
             f'<button class="ftag" data-filter="{t}" aria-pressed="false" style="--k:{TYPES[t]["color"]}">'
             f'<span class="swatch"></span>{TYPES[t]["label"]} <span class="ct">{n}</span></button>'
         )
+    tags.append('<button class="ftag ftag-mine" data-filter="mine" aria-pressed="false">'
+                'My list <span class="ct" id="mineCt">0</span></button>')
     return "\n        ".join(tags), len(present)
 
 
@@ -117,7 +116,6 @@ CSS = """
   --faint:oklch(0.58 0.016 68);
   --rule:oklch(0.82 0.02 75);
   --k:oklch(0.5 0.08 150);
-  --maybe:oklch(0.62 0.1 75);
 }
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
@@ -132,10 +130,8 @@ body{
 /* masthead */
 .masthead{padding:clamp(3rem,9vw,5.5rem) 0 1.6rem}
 .kicker{font-size:.74rem; letter-spacing:.22em; text-transform:uppercase; color:var(--faint); margin:0 0 1.5rem; font-weight:700}
-.masthead h1{
-  font-family:"Bitter",Georgia,serif; font-weight:600; color:var(--ink);
-  font-size:clamp(2.1rem,6vw,3.3rem); line-height:1.08; letter-spacing:-.005em; margin:0 0 1.1rem;
-}
+.masthead h1{font-family:"Bitter",Georgia,serif; font-weight:600; color:var(--ink);
+  font-size:clamp(2.1rem,6vw,3.3rem); line-height:1.08; letter-spacing:-.005em; margin:0 0 1.1rem}
 .lede{font-size:1.1rem; color:var(--ink-soft); max-width:38rem; margin:0 0 1.6rem}
 .coll{font-size:.74rem; letter-spacing:.16em; text-transform:uppercase; color:var(--faint); font-weight:700;
   border-top:1px solid var(--rule); border-bottom:1px solid var(--rule); padding:.8rem 0; margin:0}
@@ -152,54 +148,49 @@ body{
 .ftag.is-on{background:var(--ink); color:var(--paper); border-color:var(--ink)}
 .ftag.is-on .ct{color:oklch(0.78 0.02 80)}
 .ftag[data-filter="all"] .swatch{display:none}
+.ftag-mine{margin-left:.4rem}
 
 /* catalogue */
 .feed{margin-top:.5rem}
-.entry{
-  display:grid; grid-template-columns:8.5rem 1fr; gap:0 2.2rem;
-  border-top:1px solid var(--rule); padding:2.2rem 0;
-  transition:opacity .25s ease;
-}
-.entry[data-status="cut"]{opacity:.42}
-.entry[data-status="cut"] .title{text-decoration:line-through; text-decoration-thickness:1px}
+.entry{display:grid; grid-template-columns:8.5rem 1fr; gap:0 2.2rem;
+  border-top:1px solid var(--rule); padding:2.2rem 0; transition:background .2s ease}
+.entry[data-chosen]{background:linear-gradient(90deg, oklch(0.95 0.02 80) 0%, transparent 60%)}
 
 .gutter{display:flex; flex-direction:column; gap:.9rem; align-items:flex-start}
-.acc{font-family:"Bitter",serif; font-weight:600; font-size:1.7rem; color:var(--faint); line-height:1; font-variant-numeric:tabular-nums}
+.acc{font-family:"Bitter",serif; font-weight:600; font-size:1.7rem; color:var(--faint); line-height:1;
+  font-variant-numeric:tabular-nums; transition:color .15s}
+.entry[data-chosen] .acc{color:var(--ink)}
 .tag{display:inline-flex; align-items:center; gap:.45rem; font-size:.72rem; letter-spacing:.13em; text-transform:uppercase; font-weight:700; color:var(--ink)}
 .tag .swatch{width:.66rem; height:.66rem; background:var(--k); border-radius:1px; flex:0 0 auto}
-.disp{display:flex; flex-direction:column; gap:.3rem; align-items:stretch; width:100%}
-.stamp{font:inherit; font-size:.76rem; font-weight:700; cursor:pointer; text-align:left;
-  background:transparent; color:var(--ink-soft); border:1px solid var(--rule); border-radius:2px; padding:.28rem .5rem;
-  transition:background .12s,color .12s,border-color .12s}
-.stamp:hover{border-color:var(--ink-soft); color:var(--ink)}
-.stamp.on[data-status="keep"]{background:var(--ink); color:var(--paper); border-color:var(--ink)}
-.stamp.on[data-status="maybe"]{background:var(--maybe); color:oklch(0.28 0.04 70); border-color:var(--maybe)}
-.stamp.on[data-status="cut"]{background:transparent; color:var(--ink); border-color:var(--ink-soft); text-decoration:line-through}
+.join{font:inherit; font-size:.78rem; font-weight:700; cursor:pointer; text-align:left; width:100%;
+  background:transparent; color:var(--ink); border:1px solid var(--ink-soft); border-radius:2px; padding:.4rem .6rem;
+  display:inline-flex; align-items:center; gap:.4rem; transition:background .12s,color .12s,border-color .12s}
+.join::before{content:"+"; font-weight:700; opacity:.7}
+.join:hover{border-color:var(--ink)}
+.join.on{background:var(--ink); color:var(--paper); border-color:var(--ink)}
+.join.on::before{content:"\\2713"; opacity:1}
 
 .body{min-width:0}
 .title{font-family:"Bitter",Georgia,serif; font-weight:600; font-size:clamp(1.35rem,2.7vw,1.85rem); line-height:1.18; letter-spacing:-.005em; margin:.1rem 0 .9rem}
 .desc{margin:0 0 1.5rem; color:var(--ink); max-width:60ch}
 .sub{margin:1.2rem 0 0}
 .sublabel{font-size:.7rem; letter-spacing:.15em; text-transform:uppercase; color:var(--faint); font-weight:700; margin:0 0 .6rem}
-.sublabel .hint{text-transform:none; letter-spacing:0; font-weight:400; color:var(--faint); font-style:italic}
 ul,ol{margin:0; padding:0; list-style:none}
 
 .annot li{font-family:"Bitter",serif; font-style:italic; font-size:1rem; line-height:1.5; color:var(--ink-soft);
   padding-left:1.2em; text-indent:-1.2em; margin:0 0 .55rem; max-width:62ch}
 .annot li::before{content:"\\2014\\00a0"; color:var(--faint); font-style:normal}
 
-.checklist li{margin:0 0 .5rem}
-.checklist label{display:flex; gap:.6rem; align-items:baseline; cursor:pointer}
-.checklist input{margin:.25rem 0 0; width:1rem; height:1rem; accent-color:var(--k); flex:0 0 auto; cursor:pointer}
-.checklist .nm{font-weight:700}
-.checklist .why{color:var(--ink-soft)}
-.checklist li.dropped .who{opacity:.4; text-decoration:line-through}
+.people li{margin:0 0 .5rem; max-width:60ch}
+.people .nm{font-weight:700}
+.people .why{color:var(--ink-soft)}
 
 .absent li{color:var(--ink-soft); padding-left:1.2em; text-indent:-1.2em; margin:0 0 .45rem; max-width:60ch}
 .absent li::before{content:"+\\00a0"; color:var(--k); font-weight:700}
 
-.note{margin-top:1.3rem; width:100%; min-height:2.5rem; resize:vertical; font:inherit; font-size:.95rem;
+.note{display:none; margin-top:1.3rem; width:100%; min-height:2.5rem; resize:vertical; font:inherit; font-size:.95rem;
   color:var(--ink); background:var(--sheet); border:1px solid var(--rule); border-radius:2px; padding:.55rem .7rem}
+.entry[data-chosen] .note{display:block}
 .note::placeholder{color:var(--faint); font-style:italic}
 
 /* field-log footer (export) */
@@ -216,6 +207,7 @@ ul,ol{margin:0; padding:0; list-style:none}
 /* editor's notes */
 .editor{margin-top:3rem; background:var(--sheet); border:1px solid var(--rule); border-radius:3px; padding:clamp(1.4rem,4vw,2.2rem)}
 .editor h2{font-family:"Bitter",serif; font-weight:600; font-size:1.4rem; margin:0 0 .9rem}
+.editor .sublabel{margin-bottom:1.1rem}
 .note-intro{color:var(--ink-soft); margin:0 0 1.1rem}
 .notelist{counter-reset:n; display:flex; flex-direction:column; gap:.8rem}
 .notelist li{position:relative; padding-left:2rem; color:var(--ink-soft); font-size:.96rem; line-height:1.5}
@@ -234,90 +226,76 @@ footer{margin-top:2.5rem; color:var(--faint); font-size:.84rem; line-height:1.5;
 @media (max-width:640px){
   body{font-size:16px}
   .entry{grid-template-columns:1fr; gap:1rem 0}
+  .entry[data-chosen]{background:linear-gradient(180deg, oklch(0.95 0.02 80) 0%, transparent 30%)}
   .gutter{flex-direction:row; flex-wrap:wrap; align-items:center; gap:.7rem}
   .acc{font-size:1.3rem}
-  .disp{flex-direction:row; width:auto; margin-left:auto}
+  .join{width:auto; margin-left:auto}
 }
 @media (prefers-reduced-motion:reduce){ html{scroll-behavior:auto} *{transition:none !important} }
 """
 
 JS = r"""
 (function(){
-  var KEY='hd-curation-2026-06-27';
+  var KEY='hd-picks-2026-06-27';
   var state={};
   try{ state=JSON.parse(localStorage.getItem(KEY)||'{}'); }catch(e){ state={}; }
   var cards=[].slice.call(document.querySelectorAll('.entry'));
 
+  function save(){ try{ localStorage.setItem(KEY,JSON.stringify(state)); }catch(e){} }
+  function chosenCount(){ return cards.filter(function(c){return c.dataset.chosen;}).length; }
+  function refresh(){
+    var n=chosenCount();
+    document.getElementById('tally').textContent = n ? (n+' of '+cards.length+' on your list') : 'Nothing on your list yet';
+    document.getElementById('mineCt').textContent = n;
+    var mine=document.querySelector('.ftag-mine');
+    if(mine.classList.contains('is-on')) applyFilter('mine');
+  }
+  function applyFilter(f){
+    cards.forEach(function(c){
+      var show = f==='all' || (f==='mine' ? !!c.dataset.chosen : c.dataset.type===f);
+      c.classList.toggle('is-hidden', !show);
+    });
+  }
+
   var ftags=[].slice.call(document.querySelectorAll('.ftag'));
   ftags.forEach(function(b){
     b.addEventListener('click',function(){
-      var f=b.dataset.filter;
       ftags.forEach(function(x){var on=x===b;x.classList.toggle('is-on',on);x.setAttribute('aria-pressed',on);});
-      cards.forEach(function(c){c.classList.toggle('is-hidden', f!=='all' && c.dataset.type!==f);});
+      applyFilter(b.dataset.filter);
     });
   });
-
-  function save(){ try{ localStorage.setItem(KEY,JSON.stringify(state)); }catch(e){} }
-  function tally(){
-    var k=0,m=0,c=0;
-    cards.forEach(function(card){var s=card.dataset.status; if(s==='cut')c++; else if(s==='maybe')m++; else k++;});
-    document.getElementById('tally').textContent=k+' keep · '+m+' maybe · '+c+' cut';
-  }
 
   cards.forEach(function(card){
     var id=card.id;
-    var st=state[id]||(state[id]={status:'keep',note:'',dropped:{}});
-    card.dataset.status=st.status||'keep';
-    var stamps=[].slice.call(card.querySelectorAll('.stamp'));
-    stamps.forEach(function(sb){
-      var on=sb.dataset.status===card.dataset.status;
-      sb.classList.toggle('on',on); sb.setAttribute('aria-checked',on);
-      sb.addEventListener('click',function(){
-        st.status=sb.dataset.status; card.dataset.status=st.status;
-        stamps.forEach(function(x){var o=x===sb;x.classList.toggle('on',o);x.setAttribute('aria-checked',o);});
-        save(); tally();
-      });
-    });
+    var st=state[id]||(state[id]={chosen:false,note:''});
+    var join=card.querySelector('.join');
+    var label=join.querySelector('.jl');
+    function paint(){
+      if(st.chosen){ card.dataset.chosen='1'; join.classList.add('on'); join.setAttribute('aria-pressed','true'); label.textContent='On my list'; }
+      else { delete card.dataset.chosen; join.classList.remove('on'); join.setAttribute('aria-pressed','false'); label.textContent='Add to my list'; }
+    }
+    paint();
+    join.addEventListener('click',function(){ st.chosen=!st.chosen; paint(); save(); refresh(); });
     var note=card.querySelector('.note');
     note.value=st.note||'';
     note.addEventListener('input',function(){ st.note=note.value; save(); });
-    [].slice.call(card.querySelectorAll('.pk')).forEach(function(cb){
-      var nm=cb.dataset.name; st.dropped=st.dropped||{};
-      var dropped=!!st.dropped[nm];
-      cb.checked=!dropped; cb.closest('li').classList.toggle('dropped',dropped);
-      cb.addEventListener('change',function(){
-        if(cb.checked){ delete st.dropped[nm]; } else { st.dropped[nm]=1; }
-        cb.closest('li').classList.toggle('dropped',!cb.checked); save();
-      });
-    });
   });
-  tally();
+  refresh();
 
-  function buildMd(){
-    var g={keep:[],maybe:[],cut:[]};
-    cards.forEach(function(card){
-      var st=state[card.id]||{status:'keep'};
-      var kept=[],dropped=[];
-      [].slice.call(card.querySelectorAll('.pk')).forEach(function(cb){ (cb.checked?kept:dropped).push(cb.dataset.name); });
-      g[st.status||'keep'].push({title:card.querySelector('.title').textContent.trim(), type:card.dataset.type,
-        kept:kept, dropped:dropped, note:(st.note||'').trim()});
+  function picks(){
+    return cards.filter(function(c){return c.dataset.chosen;}).map(function(c){
+      return { title:c.querySelector('.title').textContent.trim(), type:c.dataset.type, note:(state[c.id].note||'').trim() };
     });
-    var out='# Curation — Hybrid Dialogue conversations\n\n';
-    function sec(label,items){
-      if(!items.length) return '';
-      var s='## '+label+'\n\n';
-      items.forEach(function(it){
-        s+='### '+it.title+'  ['+it.type+']\n';
-        if(label!=='Cut'){
-          s+='- People: '+(it.kept.join(', ')||'(none)')+'\n';
-          if(it.dropped.length) s+='- Dropped: '+it.dropped.join(', ')+'\n';
-        }
-        if(it.note) s+='- Note: '+it.note+'\n';
-        s+='\n';
-      });
-      return s;
-    }
-    return (out+sec('Keep',g.keep)+sec('Maybe',g.maybe)+sec('Cut',g.cut)).trim()+'\n';
+  }
+  function asMarkdown(p){
+    var s='# My conversations — Hybrid Dialogue\n\n';
+    p.forEach(function(it){ s+='- **'+it.title+'**  ['+it.type+']'+(it.note?'  — '+it.note:'')+'\n'; });
+    return s;
+  }
+  function asMessage(p){
+    var s="I'd like to join "+p.length+" of the conversations:\n";
+    p.forEach(function(it,i){ s+=(i+1)+'. '+it.title+(it.note?' ('+it.note+')':'')+'\n'; });
+    return s.trim();
   }
 
   var toastEl=document.getElementById('toast'), tt;
@@ -327,9 +305,13 @@ JS = r"""
     if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(text).then(function(){toast(msg);},function(){fb();toast(msg);}); }
     else { fb(); toast(msg); }
   }
-  document.getElementById('copyMd').addEventListener('click',function(){ copy(buildMd(),'Decisions copied as Markdown'); });
-  document.getElementById('copyPrompt').addEventListener('click',function(){
-    copy("Here's how I'd like to revise the conversation set for the inquiry — please update accordingly.\n\n"+buildMd(),'Copied as a prompt for Claude');
+  document.getElementById('copyList').addEventListener('click',function(){
+    var p=picks(); if(!p.length){ toast('Add a conversation to your list first'); return; }
+    copy(asMarkdown(p),'Your list copied');
+  });
+  document.getElementById('copyMsg').addEventListener('click',function(){
+    var p=picks(); if(!p.length){ toast('Add a conversation to your list first'); return; }
+    copy(asMessage(p),'Copied as a message to share');
   });
 })();
 """
@@ -338,7 +320,6 @@ JS = r"""
 def build(data, model, date_str):
     invs = data.get("invitations", [])
     browse_html, kinds = render_browse(invs)
-    nice_date = ""
     try:
         nice_date = datetime.datetime.strptime(date_str, "%Y-%m-%d").strftime("%-d %B %Y")
     except ValueError:
@@ -365,10 +346,10 @@ def build(data, model, date_str):
   <header class="masthead">
     <p class="kicker">Hybrid Dialogue &middot; a field catalogue</p>
     <h1>Six conversations,<br>drawn from sixteen voices</h1>
-    <p class="lede">A starting set, gathered from the survey. Each is grown from what people actually wrote, with who might join and who's not yet here. A draft: keep, set aside, or cut, and reassign freely.</p>
+    <p class="lede">A starting set, gathered from the survey. Each is grown from what people actually wrote, with who might join and who's not yet here. Mark the ones that pull you, add a note if you like, and copy your list to share.</p>
     <p class="coll">""" + coll + """</p>
     <div class="browse">
-      <span class="browse-label">Browse by kind</span>
+      <span class="browse-label">Browse</span>
         """ + browse_html + """
     </div>
   </header>
@@ -380,13 +361,14 @@ def build(data, model, date_str):
   <div class="fieldlog">
     <span class="tally" id="tally"></span>
     <div class="logbtns">
-      <button class="logbtn" id="copyMd">Copy decisions</button>
-      <button class="logbtn ghost" id="copyPrompt">Copy as prompt</button>
+      <button class="logbtn" id="copyList">Copy my list</button>
+      <button class="logbtn ghost" id="copyMsg">Copy as message</button>
     </div>
   </div>
 
-  <section class="editor" aria-label="Editor's notes">
+  <section class="editor" aria-label="Notes on how this set was made">
     <h2>From the field notes</h2>
+    <p class="sublabel">How this set was put together</p>
     """ + render_notes(data.get("notes_for_curation", "")) + """
   </section>
 
