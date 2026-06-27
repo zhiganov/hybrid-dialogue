@@ -1,4 +1,4 @@
-# chat-tool
+# hybrid-dialogue
 
 Open-source contributions to **Ben Roberts' Hybrid Conversation Toolkit** — a July 2026 inquiry into better tools for asynchronous and hybrid conversation, where the design itself is shaped collaboratively with Claude.
 
