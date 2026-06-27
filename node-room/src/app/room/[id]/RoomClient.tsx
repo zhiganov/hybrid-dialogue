@@ -16,6 +16,17 @@ function tokenKey(roomId: string) {
   return `node-room-token-${roomId}`;
 }
 
+function timeAgo(iso: string): string {
+  const secs = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000));
+  if (secs < 45) return "just now";
+  const mins = Math.round(secs / 60);
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.round(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.round(hrs / 24);
+  return `${days}d ago`;
+}
+
 export function RoomClient(props: {
   roomId: string;
   nodeTitle: string;
@@ -24,11 +35,15 @@ export function RoomClient(props: {
   const { roomId } = props;
   const [token, setToken] = useState<string | null>(null);
   const [name, setName] = useState("");
+  const [joinError, setJoinError] = useState(false);
   const [messages, setMessages] = useState<UiMessage[]>([]);
+  const [loaded, setLoaded] = useState(false);
   const [draft, setDraft] = useState("");
   const [tag, setTag] = useState<ContributionTag | "">("");
   const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState(false);
   const sinceRef = useRef(0);
+  const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setToken(localStorage.getItem(tokenKey(roomId)));
@@ -38,6 +53,7 @@ export function RoomClient(props: {
     const res = await fetch(`/api/rooms/${roomId}/messages?since=${sinceRef.current}`);
     if (!res.ok) return;
     const data = (await res.json()) as { messages: UiMessage[] };
+    setLoaded(true);
     if (data.messages.length) {
       sinceRef.current = data.messages[data.messages.length - 1].id;
       setMessages((prev) => [...prev, ...data.messages]);
@@ -55,32 +71,46 @@ export function RoomClient(props: {
   async function join(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) return;
-    const res = await fetch(`/api/rooms/${roomId}/join`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ displayName: name.trim() }),
-    });
-    if (!res.ok) return;
-    const data = (await res.json()) as { participantToken: string };
-    localStorage.setItem(tokenKey(roomId), data.participantToken);
-    setToken(data.participantToken);
+    setJoinError(false);
+    try {
+      const res = await fetch(`/api/rooms/${roomId}/join`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ displayName: name.trim() }),
+      });
+      if (!res.ok) {
+        setJoinError(true);
+        return;
+      }
+      const data = (await res.json()) as { participantToken: string };
+      localStorage.setItem(tokenKey(roomId), data.participantToken);
+      setToken(data.participantToken);
+    } catch {
+      setJoinError(true);
+    }
   }
 
   async function send(e: React.FormEvent) {
     e.preventDefault();
     if (!draft.trim() || !token) return;
     setSending(true);
+    setSendError(false);
     try {
       const res = await fetch(`/api/rooms/${roomId}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ participantToken: token, body: draft.trim(), tag: tag || undefined }),
       });
-      if (res.ok) {
-        setDraft("");
-        setTag("");
-        await poll();
+      if (!res.ok) {
+        setSendError(true);
+        return;
       }
+      setDraft("");
+      setTag("");
+      await poll();
+      bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    } catch {
+      setSendError(true);
     } finally {
       setSending(false);
     }
@@ -88,57 +118,134 @@ export function RoomClient(props: {
 
   if (!token) {
     return (
-      <main style={{ maxWidth: 640, margin: "0 auto", padding: 24 }}>
-        <h1>{props.nodeTitle}</h1>
-        <p>{props.nodeDescription}</p>
-        <form onSubmit={join}>
-          <label>
+      <main className="welcome">
+        <div className="page-head">
+          <h1 className="title">{props.nodeTitle}</h1>
+          <p className="lede">{props.nodeDescription}</p>
+        </div>
+        <form className="field" onSubmit={join}>
+          <label className="field-label" htmlFor="name">
             Your name
-            <input value={name} onChange={(e) => setName(e.target.value)} required />
           </label>
-          <button type="submit">Enter the conversation</button>
+          <input
+            id="name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="How you want to appear in the room"
+            required
+          />
+          {joinError ? (
+            <p className="notice notice--error" role="alert">
+              Could not enter the room. Please check the link and try again.
+            </p>
+          ) : null}
+          <div className="btn-row">
+            <button className="btn btn--primary" type="submit">
+              Enter the conversation
+            </button>
+          </div>
         </form>
       </main>
     );
   }
 
   return (
-    <main style={{ maxWidth: 720, margin: "0 auto", padding: 24 }}>
-      <h1>{props.nodeTitle}</h1>
-      <p>{props.nodeDescription}</p>
+    <main className="page">
+      <header className="page-head">
+        <h1 className="title">{props.nodeTitle}</h1>
+        <p className="lede">{props.nodeDescription}</p>
+      </header>
 
-      <ol style={{ listStyle: "none", padding: 0 }}>
-        {messages.map((m) => (
-          <li key={m.id} style={{ margin: "16px 0" }}>
-            <strong>{m.authorType === "claude" ? "Facilitator" : m.authorName}</strong>
-            {m.contributionTag ? <em> ({m.contributionTag})</em> : null}
-            <div style={{ whiteSpace: "pre-wrap" }}>{m.body}</div>
-          </li>
-        ))}
+      <ol className="thread" aria-live="polite" aria-label="Conversation">
+        {messages.map((m) =>
+          m.authorType === "claude" ? (
+            <li className="entry entry--weave" key={m.id}>
+              <p className="entry-meta">
+                <span className="weave-author">
+                  <span className="weave-mark" aria-hidden="true">
+                    &#9672;
+                  </span>
+                  Claude
+                </span>
+                <span className="entry-dot" aria-hidden="true">
+                  &middot;
+                </span>
+                <span>{timeAgo(m.createdAt)}</span>
+                <span className="entry-dot" aria-hidden="true">
+                  &middot;
+                </span>
+                <span className="weave-label">weave</span>
+              </p>
+              <p className="entry-body">{m.body}</p>
+            </li>
+          ) : (
+            <li className="entry" key={m.id}>
+              <p className="entry-meta">
+                <span className="entry-author">{m.authorName ?? "Someone"}</span>
+                <span className="entry-dot" aria-hidden="true">
+                  &middot;
+                </span>
+                <span>{timeAgo(m.createdAt)}</span>
+                {m.contributionTag ? (
+                  <span className={`tag tag--${m.contributionTag}`}>{m.contributionTag}</span>
+                ) : null}
+              </p>
+              <p className="entry-body">{m.body}</p>
+            </li>
+          )
+        )}
       </ol>
 
-      <form onSubmit={send}>
-        <textarea
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          placeholder="Add to the conversation (use @claude to ask the facilitator)"
-          rows={3}
-          required
-        />
-        <div>
-          <select value={tag} onChange={(e) => setTag(e.target.value as ContributionTag | "")}>
-            <option value="">No tag</option>
-            {CONTRIBUTION_TAGS.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
-          </select>
-          <button type="submit" disabled={sending}>
+      {loaded && messages.length === 0 ? (
+        <p className="empty">
+          No one has written yet. You could be the first to add a thought.
+        </p>
+      ) : null}
+
+      <form className="composer" onSubmit={send}>
+        <div className="field">
+          <label className="field-label" htmlFor="draft">
+            Add to the conversation
+          </label>
+          <textarea
+            id="draft"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            placeholder="Write a thought. Mention @claude to ask the facilitator."
+            rows={3}
+            required
+          />
+        </div>
+        <div className="composer-row">
+          <span className="composer-tag">
+            <label className="field-label" htmlFor="tag">
+              Kind
+            </label>
+            <select
+              id="tag"
+              value={tag}
+              onChange={(e) => setTag(e.target.value as ContributionTag | "")}
+            >
+              <option value="">No tag</option>
+              {CONTRIBUTION_TAGS.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </select>
+          </span>
+          <button className="btn btn--primary" type="submit" disabled={sending}>
             {sending ? "Posting" : "Post"}
           </button>
         </div>
+        {sendError ? (
+          <p className="notice notice--error" role="alert">
+            Your message did not send. It is still here, so you can try again.
+          </p>
+        ) : null}
       </form>
+
+      <div ref={bottomRef} />
     </main>
   );
 }
