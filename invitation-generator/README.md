@@ -28,6 +28,16 @@ For a survey CSV it writes (to `output/`):
 - `kumu-elements-<date>.csv` — `Engagement Node` rows for the Kumu Elements sheet.
 - `kumu-connections-<date>.csv` — `Person → Node` rows of type `Suggested` for the Kumu Connections sheet.
 
+## Read it as a web page
+
+A long markdown brief doesn't get read. `render_html.py` turns the JSON into a single, navigable HTML page — each conversation as a card you can filter by kind, plus a lightweight **curation layer**: set each to keep / maybe / cut, uncheck people who don't fit, and a "Copy curation as Markdown" button that exports the decisions to paste back. (Following [Thariq Shihipar's HTML-over-Markdown approach](https://claude.com/blog/using-claude-code-the-unreasonable-effectiveness-of-html).)
+
+```sh
+python render_html.py --input output/invitations-<date>.json
+```
+
+It reads the existing JSON — no API call — and writes `output/invitations-<date>.html`. Open it locally, or upload the single file anywhere static (e.g. Netlify) to share a link. The reader's keep/cut/note choices are saved only in their own browser (localStorage); nothing is sent anywhere.
+
 ## The prompt
 
 The full prompt lives in [`prompt.md`](./prompt.md) — read and edit it freely; it's the heart of the tool. It's what pushes Claude past naive topic-clustering toward grounded, mixed-type, right-sized conversations with fit-and-complementarity matchmaking.
