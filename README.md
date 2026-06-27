@@ -1,4 +1,4 @@
-# hybrid-dialogue
+# Hybrid Dialogue
 
 Open tools for **asynchronous and hybrid group conversation** — built for, and with, Ben Roberts' Hybrid Conversation Toolkit inquiry (July 2026).
 
