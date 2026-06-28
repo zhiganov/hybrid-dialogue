@@ -9,6 +9,7 @@ export type Room = {
   nodeDescription: string;
   facilitationPrompt: string;
   facilitatorToken: string;
+  listed: boolean;
   createdAt: string;
 };
 export type Participant = {
@@ -41,6 +42,7 @@ type RoomRow = {
   node_description: string;
   facilitation_prompt: string;
   facilitator_token: string;
+  listed: boolean;
   created_at: string;
 };
 const toRoom = (r: RoomRow): Room => ({
@@ -49,6 +51,7 @@ const toRoom = (r: RoomRow): Room => ({
   nodeDescription: r.node_description,
   facilitationPrompt: r.facilitation_prompt,
   facilitatorToken: r.facilitator_token,
+  listed: r.listed,
   createdAt: r.created_at,
 });
 
@@ -56,13 +59,14 @@ export async function createRoom(input: {
   nodeTitle: string;
   nodeDescription: string;
   facilitationPrompt: string;
+  listed?: boolean;
 }): Promise<Room> {
   const id = generateToken();
   const facilitatorToken = generateToken();
   const rows = await query<RoomRow>(
-    `INSERT INTO rooms (id, node_title, node_description, facilitation_prompt, facilitator_token)
-     VALUES ($1,$2,$3,$4,$5) RETURNING *`,
-    [id, input.nodeTitle, input.nodeDescription, input.facilitationPrompt, facilitatorToken]
+    `INSERT INTO rooms (id, node_title, node_description, facilitation_prompt, facilitator_token, listed)
+     VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
+    [id, input.nodeTitle, input.nodeDescription, input.facilitationPrompt, facilitatorToken, input.listed ?? true]
   );
   return toRoom(rows[0]);
 }
@@ -220,4 +224,51 @@ export async function finalizeHarvest(roomId: string, body: string): Promise<Har
 export async function getHarvest(roomId: string): Promise<Harvest | null> {
   const rows = await query<HarvestRow>("SELECT * FROM harvests WHERE room_id = $1", [roomId]);
   return rows[0] ? toHarvest(rows[0]) : null;
+}
+
+export type LobbyRoom = {
+  id: string;
+  nodeTitle: string;
+  nodeDescription: string;
+  participantCount: number;
+  messageCount: number;
+  lastActivityAt: string | null;
+  createdAt: string;
+};
+
+export async function listRooms(): Promise<LobbyRoom[]> {
+  const rows = await query<{
+    id: string;
+    node_title: string;
+    node_description: string;
+    created_at: string;
+    participant_count: number;
+    message_count: number;
+    last_activity_at: string | null;
+  }>(
+    `SELECT r.id, r.node_title, r.node_description, r.created_at,
+       COALESCE(p.cnt, 0)::int AS participant_count,
+       COALESCE(m.cnt, 0)::int AS message_count,
+       m.last_at AS last_activity_at
+     FROM rooms r
+     LEFT JOIN (SELECT room_id, count(*) AS cnt FROM participants GROUP BY room_id) p
+       ON p.room_id = r.id
+     LEFT JOIN (SELECT room_id, count(*) AS cnt, max(created_at) AS last_at FROM messages GROUP BY room_id) m
+       ON m.room_id = r.id
+     WHERE r.listed = true
+     ORDER BY COALESCE(m.last_at, r.created_at) DESC`
+  );
+  return rows.map((r) => ({
+    id: r.id,
+    nodeTitle: r.node_title,
+    nodeDescription: r.node_description,
+    participantCount: r.participant_count,
+    messageCount: r.message_count,
+    lastActivityAt: r.last_activity_at,
+    createdAt: r.created_at,
+  }));
+}
+
+export async function setRoomListed(roomId: string, listed: boolean): Promise<void> {
+  await query("UPDATE rooms SET listed = $2 WHERE id = $1", [roomId, listed]);
 }

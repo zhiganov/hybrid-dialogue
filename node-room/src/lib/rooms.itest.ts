@@ -56,4 +56,17 @@ d("rooms data access (integration)", () => {
     expect(fin.finalizedAt).not.toBeNull();
     expect((await rooms.getHarvest(room.id))?.body).toBe("Final harvest.");
   });
+
+  test("listRooms returns only listed rooms, newest activity first; setRoomListed hides one", async () => {
+    const rooms = await import("./rooms");
+    const shown = await rooms.createRoom({ nodeTitle: "Shown", nodeDescription: "d", facilitationPrompt: "" });
+    const hidden = await rooms.createRoom({ nodeTitle: "Hidden", nodeDescription: "d", facilitationPrompt: "", listed: false });
+    let lobby = await rooms.listRooms();
+    const ids = lobby.map((r) => r.id);
+    expect(ids).toContain(shown.id);
+    expect(ids).not.toContain(hidden.id);
+    await rooms.setRoomListed(shown.id, false);
+    lobby = await rooms.listRooms();
+    expect(lobby.map((r) => r.id)).not.toContain(shown.id);
+  });
 });
