@@ -12,7 +12,17 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
   const harvest = await getHarvest(id);
   if (!harvest) return Response.json({ error: "no harvest yet" }, { status: 400 });
 
-  const title = harvest.body.split("\n")[0].replace(/^#+\s*/, "").slice(0, 120) || "Harvest";
+  // First line of the harvest, stripped of markdown the model tends to emit
+  // (heading hashes, a leading "**Title:**" label, stray bold), so the Kumu
+  // node label reads as plain prose.
+  const title =
+    harvest.body
+      .split("\n")[0]
+      .replace(/^#+\s*/, "")
+      .replace(/^\*\*\s*title\s*:?\s*\*\*\s*:?\s*/i, "")
+      .replace(/\*\*/g, "")
+      .trim()
+      .slice(0, 120) || "Harvest";
 
   // Anonymized shape: tally the tags human contributions carried, never who said
   // what. Display names and message bodies stay in the room (hybrid-dialogue#2).
