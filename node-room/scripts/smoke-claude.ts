@@ -8,6 +8,7 @@ const room: Room = {
     "Several people said trust matters but meant different things by it.",
   facilitationPrompt: "Keep it grounded in concrete stories, not abstractions.",
   facilitatorToken: "x",
+  listed: true,
   createdAt: new Date().toISOString(),
 };
 

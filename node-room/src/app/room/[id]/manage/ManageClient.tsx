@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from "react";
 
-export function ManageClient(props: { roomId: string; nodeTitle: string }) {
+export function ManageClient(props: { roomId: string; nodeTitle: string; listed: boolean }) {
   const { roomId } = props;
   const [key, setKey] = useState("");
   const [harvest, setHarvest] = useState("");
   const [hasHarvest, setHasHarvest] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
+  const [listed, setListed] = useState(props.listed);
   const [finalized, setFinalized] = useState(false);
   const [weaveNote, setWeaveNote] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -40,6 +41,28 @@ export function ManageClient(props: { roomId: string; nodeTitle: string }) {
       setWeaveNote("A weave was posted to the room.");
     } catch {
       setError("The weave did not post. Please try again.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function toggleListed() {
+    setBusy("listed");
+    setError(null);
+    const next = !listed;
+    try {
+      const res = await fetch(`/api/rooms/${roomId}?key=${key}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ listed: next }),
+      });
+      if (!res.ok) {
+        setError("Could not update lobby visibility. Please try again.");
+        return;
+      }
+      setListed(next);
+    } catch {
+      setError("Could not update lobby visibility. Please try again.");
     } finally {
       setBusy(null);
     }
@@ -99,6 +122,20 @@ export function ManageClient(props: { roomId: string; nodeTitle: string }) {
           {error}
         </p>
       ) : null}
+
+      <section className="panel">
+        <h2 className="section-title">Lobby</h2>
+        <p className="field-hint">
+          {listed
+            ? "Listed on the home page so people can find and join this conversation."
+            : "Hidden from the home page. Only people with the link can join."}
+        </p>
+        <div className="btn-row">
+          <button className="btn btn--quiet" onClick={toggleListed} disabled={busy !== null}>
+            {busy === "listed" ? "Updating" : listed ? "Hide from lobby" : "Show in lobby"}
+          </button>
+        </div>
+      </section>
 
       <section className="panel">
         <h2 className="section-title">Weave</h2>

@@ -44,7 +44,7 @@ def word(n: int) -> str:
     return WORDS.get(n, str(n))
 
 
-def render_entries(invs):
+def render_entries(invs, room_urls):
     out = []
     for i, inv in enumerate(invs, 1):
         t = inv.get("type", "content")
@@ -56,12 +56,19 @@ def render_entries(invs):
             for p in inv.get("recommended_participants", [])
         )
         absent = "".join(f"<li>{e(a)}</li>" for a in inv.get("archetypes_to_invite", []))
+        room_url = room_urls.get(inv.get("title", ""))
+        enter = (
+            f'<a class="enter" href="{e(room_url)}" target="_blank" rel="noopener">Enter the conversation &rarr;</a>'
+            if room_url else ""
+        )
+        data_room = f' data-room="{e(room_url)}"' if room_url else ""
         out.append(f"""
-      <article class="entry" data-type="{t}" id="c{i}" style="--k:{meta['color']}">
+      <article class="entry" data-type="{t}" id="c{i}" style="--k:{meta['color']}"{data_room}>
         <div class="gutter">
           <span class="acc">{i:02d}</span>
           <span class="tag"><span class="swatch"></span>{meta['label']}</span>
           <button class="join" aria-pressed="false"><span class="jl">Add to my list</span></button>
+          {enter}
         </div>
         <div class="body">
           <h2 class="title">{e(inv.get('title',''))}</h2>
@@ -132,6 +139,8 @@ body{
 .masthead h1{font-family:"Bitter",Georgia,serif; font-weight:600; color:var(--ink);
   font-size:clamp(2.1rem,6vw,3.3rem); line-height:1.08; letter-spacing:-.005em; margin:0 0 1.1rem}
 .lede{font-size:1.1rem; color:var(--ink-soft); max-width:38rem; margin:0 0 1.6rem}
+.livelinks{margin:.2rem 0 0; font-size:.92rem}
+.link{color:var(--ink); font-weight:700}
 .coll{font-size:.74rem; letter-spacing:.16em; text-transform:uppercase; color:var(--faint); font-weight:700;
   border-top:1px solid var(--rule); border-bottom:1px solid var(--rule); padding:.8rem 0; margin:0}
 
@@ -168,6 +177,9 @@ body{
 .join:hover{border-color:var(--ink)}
 .join.on{background:var(--ink); color:var(--paper); border-color:var(--ink)}
 .join.on::before{content:"\\2713"; opacity:1}
+.enter{font:inherit; font-size:.8rem; font-weight:700; text-decoration:none; color:var(--paper);
+  background:var(--ink); border:1px solid var(--ink); border-radius:2px; padding:.4rem .6rem; text-align:center}
+.enter:hover{opacity:.85}
 
 .body{min-width:0}
 .title{font-family:"Bitter",Georgia,serif; font-weight:600; font-size:clamp(1.35rem,2.7vw,1.85rem); line-height:1.18; letter-spacing:-.005em; margin:.1rem 0 .9rem}
@@ -275,17 +287,17 @@ JS = r"""
 
   function picks(){
     return cards.filter(function(c){return c.dataset.chosen;}).map(function(c){
-      return { title:c.querySelector('.title').textContent.trim(), type:c.dataset.type };
+      return { title:c.querySelector('.title').textContent.trim(), type:c.dataset.type, room:c.dataset.room||'' };
     });
   }
   function asMarkdown(p){
-    var s='# My conversations — Hybrid Dialogue\n\n';
-    p.forEach(function(it){ s+='- **'+it.title+'**  ['+it.type+']\n'; });
+    var s='# My conversations - Hybrid Dialogue\n\n';
+    p.forEach(function(it){ s+='- **'+it.title+'**'+(it.room?'  '+it.room:'')+'\n'; });
     return s;
   }
   function asMessage(p){
     var s="I'd like to join "+p.length+" of the conversations:\n";
-    p.forEach(function(it,i){ s+=(i+1)+'. '+it.title+'\n'; });
+    p.forEach(function(it,i){ s+=(i+1)+'. '+it.title+(it.room?' - '+it.room:'')+'\n'; });
     return s.trim();
   }
 
@@ -308,7 +320,8 @@ JS = r"""
 """
 
 
-def build(data, model, date_str):
+def build(data, model, date_str, room_urls=None, base=""):
+    room_urls = room_urls or {}
     invs = data.get("invitations", [])
     browse_html, kinds = render_browse(invs)
     try:
@@ -320,6 +333,13 @@ def build(data, model, date_str):
             nice_date = date_str
     coll = (f"{word(len(invs))} entries &middot; sixteen contributors &middot; "
             f"{word(kinds)} kinds &middot; {e(nice_date)}")
+    live_links = (
+        f'<p class="livelinks">'
+        f'<a class="link" href="{e(base)}/" target="_blank" rel="noopener">See all live conversations &rarr;</a>'
+        f' &nbsp;&middot;&nbsp; '
+        f'<a class="link" href="{e(base)}/create" target="_blank" rel="noopener">Propose another conversation &rarr;</a>'
+        f'</p>'
+    ) if base else ""
     return """<!doctype html>
 <html lang="en">
 <head>
@@ -338,6 +358,7 @@ def build(data, model, date_str):
     <p class="kicker">Hybrid Dialogue &middot; a field catalogue</p>
     <h1>Six conversations,<br>drawn from sixteen voices</h1>
     <p class="lede">A starting set, gathered from the survey. Each is grown from what people actually wrote, with who might join and who's not yet here. Mark the ones that pull you, and copy your list to share.</p>
+    """ + live_links + """
     <p class="coll">""" + coll + """</p>
     <div class="browse">
       <span class="browse-label">Browse</span>
@@ -346,7 +367,7 @@ def build(data, model, date_str):
   </header>
 
   <main class="feed">
-""" + render_entries(invs) + """
+""" + render_entries(invs, room_urls) + """
   </main>
 
   <div class="fieldlog">
@@ -380,6 +401,7 @@ def main():
     ap.add_argument("--input", help="invitations-*.json (defaults to newest in ./output)")
     ap.add_argument("--out", default=str(HERE / "output"))
     ap.add_argument("--model", default="claude-opus-4-8")
+    ap.add_argument("--rooms", help="rooms-*.json from create_rooms.py (optional)")
     args = ap.parse_args()
 
     inp = args.input
@@ -393,10 +415,16 @@ def main():
     m = re.search(r"(\d{4}-\d{2}-\d{2})", pathlib.Path(inp).name)
     date_str = m.group(1) if m else datetime.date.today().isoformat()
 
+    room_urls, base = {}, ""
+    if args.rooms:
+        rm = json.loads(pathlib.Path(args.rooms).read_text(encoding="utf-8"))
+        base = rm.get("base_url", "")
+        room_urls = {v["title"]: v["room_url"] for v in rm.get("rooms", {}).values()}
+
     out = pathlib.Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     dest = out / f"invitations-{date_str}.html"
-    dest.write_text(build(data, args.model, date_str), encoding="utf-8")
+    dest.write_text(build(data, args.model, date_str, room_urls, base), encoding="utf-8")
     print(f"Wrote {dest}")
 
 

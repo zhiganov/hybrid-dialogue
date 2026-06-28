@@ -6,5 +6,5 @@ export default async function ManagePage({ params }: { params: Promise<{ id: str
   const { id } = await params;
   const room = await getRoom(id);
   if (!room) notFound();
-  return <ManageClient roomId={room.id} nodeTitle={room.nodeTitle} />;
+  return <ManageClient roomId={room.id} nodeTitle={room.nodeTitle} listed={room.listed} />;
 }

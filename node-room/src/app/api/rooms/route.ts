@@ -4,7 +4,7 @@ import { openingFrame } from "@/lib/claude";
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { nodeTitle, nodeDescription, facilitationPrompt } = body ?? {};
+  const { nodeTitle, nodeDescription, facilitationPrompt, listed } = body ?? {};
   if (!nodeTitle || !nodeDescription) {
     return Response.json({ error: "nodeTitle and nodeDescription are required" }, { status: 400 });
   }
@@ -12,6 +12,7 @@ export async function POST(req: NextRequest) {
     nodeTitle,
     nodeDescription,
     facilitationPrompt: facilitationPrompt ?? "",
+    listed: typeof listed === "boolean" ? listed : true,
   });
   try {
     const frame = await openingFrame(room);

@@ -13,6 +13,7 @@ const atkinson = Atkinson_Hyperlegible({
 export const metadata: Metadata = {
   title: "Hybrid Dialogue",
   description: "A shared conversation room with Claude as a quiet facilitator.",
+  robots: { index: false, follow: false },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
