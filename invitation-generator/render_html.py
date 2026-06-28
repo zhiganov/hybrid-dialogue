@@ -118,28 +118,31 @@ def render_entries(invs, room_urls):
             if room_url else ""
         )
 
+        # Detail accordion: only render the sections that have content, and omit
+        # the accordion entirely for lean entries (e.g. the newer conversations
+        # that carry only a framing).
+        detail = []
+        if quotes_html:
+            detail.append('<section class="section"><h3 class="section-label">Collected from</h3>'
+                          f'<div class="quotes">{quotes_html}</div></section>')
+        if people:
+            detail.append('<section class="section"><h3 class="section-label">Who might fit</h3>'
+                          f'<div class="people">{people}</div></section>')
+        if absent:
+            detail.append('<section class="section"><h3 class="section-label">Not yet here</h3>'
+                          f'<div class="absent">{absent}</div></section>')
+        details_html = (
+            '<details class="more"><summary>Where this came from, and who might fit</summary>'
+            f'<div class="more-body">{"".join(detail)}</div></details>'
+            if detail else ""
+        )
+
         out.append(f"""
       <article class="entry" data-type="{t}" id="c{i}">
         <p class="kind">{e(k)}</p>
         <h2 class="title">{txt(inv.get('title', ''))}</h2>
         <p class="framing">{txt(inv.get('framing', ''))}</p>
-        <details class="more">
-          <summary>Where this came from, and who might fit</summary>
-          <div class="more-body">
-            <section class="section">
-              <h3 class="section-label">Collected from</h3>
-              <div class="quotes">{quotes_html}</div>
-            </section>
-            <section class="section">
-              <h3 class="section-label">Who might fit</h3>
-              <div class="people">{people}</div>
-            </section>
-            <section class="section">
-              <h3 class="section-label">Not yet here</h3>
-              <div class="absent">{absent}</div>
-            </section>
-          </div>
-        </details>
+        {details_html}
         {actions}
       </article>""")
     return "\n".join(out)
@@ -341,13 +344,19 @@ def build(data, model, date_str, room_urls=None, base=""):
         f'Propose another conversation <span class="arr" aria-hidden="true">&rarr;</span></a>'
         f'</div>'
     ) if base else ""
+    count_word = word(len(invs))
+    notes_raw = (data.get("notes_for_curation", "") or "").strip()
+    notes_section = (
+        '<section class="notes" aria-label="How this set was made">'
+        '<h2>How this set was made</h2>' + render_notes(notes_raw) + '</section>'
+    ) if notes_raw else ""
     return """<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<title>Hybrid Dialogue &middot; six conversations</title>
+<title>Hybrid Dialogue &middot; """ + count_word.lower() + """ conversations</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
@@ -357,7 +366,7 @@ def build(data, model, date_str, room_urls=None, base=""):
 <div class="page">
   <header class="masthead">
     <p class="kicker">Hybrid Dialogue &middot; a programme of conversations</p>
-    <h1>Six conversations, drawn from sixteen voices</h1>
+    <h1>""" + count_word + """ conversations, drawn from sixteen voices</h1>
     <p class="lede">A starting set, gathered from the survey. Each one grew from what people actually wrote. Read the framing, open the detail if you want it, and join the ones that pull you.</p>
     """ + live_links + """
   </header>
@@ -378,10 +387,7 @@ def build(data, model, date_str, room_urls=None, base=""):
 """ + render_entries(invs, room_urls) + """
   </main>
 
-  <section class="notes" aria-label="How this set was made">
-    <h2>How this set was made</h2>
-    """ + render_notes(data.get("notes_for_curation", "")) + """
-  </section>
+  """ + notes_section + """
 
   <footer class="colophon">
     Gathered from sixteen survey responses with """ + e(model) + """ on """ + e(nice_date) + """.
