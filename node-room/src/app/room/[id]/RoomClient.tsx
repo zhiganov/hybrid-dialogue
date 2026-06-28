@@ -49,8 +49,11 @@ export function RoomClient(props: {
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState(false);
   const [facMode, setFacMode] = useState(false);
+  const [liveReady, setLiveReady] = useState(false);
   const sinceRef = useRef(0);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const firstLoadRef = useRef(false);
+  const initialIdsRef = useRef<Set<number>>(new Set());
 
   useEffect(() => {
     setToken(localStorage.getItem(tokenKey(roomId)));
@@ -61,6 +64,10 @@ export function RoomClient(props: {
     const res = await fetch(`/api/rooms/${roomId}/messages?since=${sinceRef.current}`);
     if (!res.ok) return;
     const data = (await res.json()) as { messages: UiMessage[] };
+    if (!firstLoadRef.current) {
+      firstLoadRef.current = true;
+      initialIdsRef.current = new Set(data.messages.map((m) => m.id));
+    }
     setLoaded(true);
     if (data.messages.length) {
       const maxId = Math.max(...data.messages.map((m) => m.id));
@@ -80,6 +87,13 @@ export function RoomClient(props: {
     }, POLL_INTERVAL_MS);
     return () => clearInterval(interval);
   }, [poll]);
+
+  // Keep the thread silent on first paint; the live region only announces
+  // messages that arrive after the initial load, so a returning participant
+  // does not hear every existing message read out at once.
+  useEffect(() => {
+    if (loaded) setLiveReady(true);
+  }, [loaded]);
 
   async function join(e: React.FormEvent) {
     e.preventDefault();
@@ -199,10 +213,15 @@ export function RoomClient(props: {
         ) : null}
       </header>
 
-      <ol className="thread" aria-live="polite" aria-label="Conversation">
+      <ol className="thread" aria-live={liveReady ? "polite" : "off"} aria-label="Conversation">
         {messages.map((m) =>
           m.authorType === "claude" ? (
-            <li className="entry entry--weave" key={m.id}>
+            <li
+              className={`entry entry--weave${
+                firstLoadRef.current && !initialIdsRef.current.has(m.id) ? " entry--in" : ""
+              }`}
+              key={m.id}
+            >
               <p className="entry-meta">
                 <span className="weave-author">
                   <span className="weave-mark" aria-hidden="true">
@@ -222,7 +241,12 @@ export function RoomClient(props: {
               <p className="entry-body">{m.body}</p>
             </li>
           ) : (
-            <li className="entry" key={m.id}>
+            <li
+              className={`entry${
+                firstLoadRef.current && !initialIdsRef.current.has(m.id) ? " entry--in" : ""
+              }`}
+              key={m.id}
+            >
               <p className="entry-meta">
                 <span className="entry-author">{m.authorName ?? "Someone"}</span>
                 <span className="entry-dot" aria-hidden="true">

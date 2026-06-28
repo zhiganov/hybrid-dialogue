@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export function ManageClient(props: { roomId: string; nodeTitle: string; listed: boolean }) {
   const { roomId } = props;
@@ -12,6 +12,26 @@ export function ManageClient(props: { roomId: string; nodeTitle: string; listed:
   const [finalized, setFinalized] = useState(false);
   const [weaveNote, setWeaveNote] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [confirmFinalize, setConfirmFinalize] = useState(false);
+  const confirmTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (confirmTimer.current) clearTimeout(confirmTimer.current);
+    };
+  }, []);
+
+  function onFinalizeClick() {
+    if (!confirmFinalize) {
+      setConfirmFinalize(true);
+      if (confirmTimer.current) clearTimeout(confirmTimer.current);
+      confirmTimer.current = setTimeout(() => setConfirmFinalize(false), 5000);
+      return;
+    }
+    if (confirmTimer.current) clearTimeout(confirmTimer.current);
+    setConfirmFinalize(false);
+    void saveHarvest(true);
+  }
 
   useEffect(() => {
     const k = new URLSearchParams(window.location.search).get("key") ?? "";
@@ -150,7 +170,7 @@ export function ManageClient(props: { roomId: string; nodeTitle: string; listed:
           Claude also weaves on its own as the conversation grows.
         </p>
         <div className="btn-row">
-          <button className="btn btn--primary" onClick={weaveNow} disabled={busy !== null}>
+          <button className="btn btn--quiet" onClick={weaveNow} disabled={busy !== null}>
             {busy === "weave" ? "Weaving" : "Weave now"}
           </button>
           {weaveNote ? <span className="status status--done">&#10003; {weaveNote}</span> : null}
@@ -189,10 +209,10 @@ export function ManageClient(props: { roomId: string; nodeTitle: string; listed:
           </button>
           <button
             className="btn btn--primary"
-            onClick={() => saveHarvest(true)}
+            onClick={onFinalizeClick}
             disabled={busy !== null || !harvest.trim()}
           >
-            Finalize
+            {confirmFinalize ? "Tap again to finalize" : "Finalize"}
           </button>
           {finalized ? <span className="status status--done">&#10003; Finalized</span> : null}
         </div>
