@@ -55,9 +55,8 @@ A participant addressed you with @claude. Respond briefly and helpfully, then ha
 // Periodic weave: one synthesis / connection / opening question.
 export async function weave(room: Room, recent: Message[]): Promise<string> {
   const stream = client().messages.stream({
-    model: "claude-opus-4-8",
+    model: "claude-sonnet-4-6",
     max_tokens: 2048,
-    thinking: { type: "adaptive" },
     system: STANCE,
     messages: [
       {
@@ -77,9 +76,8 @@ Post ONE short weave. Pick the single most useful move right now: name a connect
 // Opening frame posted when the room is created.
 export async function openingFrame(room: Room): Promise<string> {
   const stream = client().messages.stream({
-    model: "claude-opus-4-8",
+    model: "claude-haiku-4-5-20251001",
     max_tokens: 2048,
-    thinking: { type: "adaptive" },
     system: STANCE,
     messages: [
       {
@@ -96,9 +94,8 @@ Write a short opening frame (three or four sentences) that welcomes people into 
 // Harvest: distill the whole conversation into an editable draft.
 export async function harvestDraft(room: Room, all: Message[]): Promise<string> {
   const stream = client().messages.stream({
-    model: "claude-opus-4-8",
+    model: "claude-sonnet-4-6",
     max_tokens: 4096,
-    thinking: { type: "adaptive" },
     system: STANCE,
     messages: [
       {
