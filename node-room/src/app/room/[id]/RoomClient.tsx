@@ -140,6 +140,11 @@ export function RoomClient(props: {
             autoFocus
             required
           />
+          <p className="field-hint">
+            Your name stays in this room. When the conversation is harvested, the
+            shared map carries only its shape: the themes and how they connect,
+            never names or what anyone wrote.
+          </p>
           {joinError ? (
             <p className="notice notice--error" role="alert">
               Could not enter the room. Please check the link and try again.

@@ -8,3 +8,6 @@ node_modules/
 data/
 invitation-generator/output/
 *-elements-people*.csv
+
+# subagent-driven-development scratch ledger
+.superpowers/

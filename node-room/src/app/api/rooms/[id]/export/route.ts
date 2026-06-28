@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { getAllMessages, getHarvest } from "@/lib/rooms";
 import { requireFacilitator } from "@/lib/facilitator";
 import { buildKumuCsv } from "@/lib/domain";
+import type { ContributionTag } from "@/lib/domain";
 
 export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
@@ -12,18 +13,21 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
   if (!harvest) return Response.json({ error: "no harvest yet" }, { status: 400 });
 
   const title = harvest.body.split("\n")[0].replace(/^#+\s*/, "").slice(0, 120) || "Harvest";
-  const participants = Array.from(
-    new Set(
-      (await getAllMessages(id))
-        .filter((m) => m.authorType === "human" && m.authorName)
-        .map((m) => m.authorName as string)
-    )
-  );
+
+  // Anonymized shape: tally the tags human contributions carried, never who said
+  // what. Display names and message bodies stay in the room (hybrid-dialogue#2).
+  const tagCounts: Partial<Record<ContributionTag, number>> = {};
+  for (const m of await getAllMessages(id)) {
+    if (m.authorType === "human" && m.contributionTag) {
+      tagCounts[m.contributionTag] = (tagCounts[m.contributionTag] ?? 0) + 1;
+    }
+  }
 
   const { elements, connections } = buildKumuCsv({
     harvestTitle: title,
     nodeTitle: gate.room.nodeTitle,
-    participants,
+    tagCounts,
+    capturedAt: (harvest.finalizedAt ?? new Date().toISOString()).slice(0, 10),
   });
 
   const csv = `# Elements\n${elements}\n\n# Connections\n${connections}\n`;

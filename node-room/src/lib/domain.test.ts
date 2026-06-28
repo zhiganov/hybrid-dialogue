@@ -53,18 +53,31 @@ describe("buildKumuCsv", () => {
   const out = buildKumuCsv({
     harvestTitle: "Trust, said plainly",
     nodeTitle: "What does trust require?",
-    participants: ["Ana", "Rijon"],
+    tagCounts: { question: 2, story: 1 },
+    capturedAt: "2026-06-28",
   });
-  test("elements has the harvest row typed Harvest", () => {
-    expect(out.elements).toContain("Label,Type");
-    expect(out.elements).toContain('"Trust, said plainly",Harvest');
+  test("elements carry the harvest, node, and a theme row per present tag", () => {
+    expect(out.elements).toContain("Label,Type,Count,Captured");
+    expect(out.elements).toContain('"Trust, said plainly",Harvest,,2026-06-28');
+    expect(out.elements).toContain('"What does trust require?",Node,,');
+    expect(out.elements).toContain("Question,Theme,2,");
+    expect(out.elements).toContain("Story,Theme,1,");
   });
-  test("connections links each person to the harvest and the harvest to the node", () => {
+  test("absent tags are omitted", () => {
+    expect(out.elements).not.toContain("Challenge");
+    expect(out.elements).not.toContain("Synthesis");
+  });
+  test("connections link present themes to the harvest and the harvest to the node", () => {
     expect(out.connections).toContain("From,To,Type");
-    expect(out.connections).toContain('Ana,"Trust, said plainly",Harvested');
-    expect(out.connections).toContain('Rijon,"Trust, said plainly",Harvested');
+    expect(out.connections).toContain('Question,"Trust, said plainly",Surfaced');
+    expect(out.connections).toContain('Story,"Trust, said plainly",Surfaced');
     expect(out.connections).toContain(
       '"Trust, said plainly","What does trust require?",Harvested'
     );
+  });
+  test("no participant identities cross the boundary", () => {
+    const both = out.elements + out.connections;
+    expect(both).not.toContain("Ana");
+    expect(both).not.toContain("Rijon");
   });
 });

@@ -32,10 +32,19 @@ export function shouldWeave(humanMessagesSinceLastClaude: number): boolean {
   return humanMessagesSinceLastClaude >= WEAVE_THRESHOLD;
 }
 
+// What crosses the room boundary is the conversation's anonymized shape, never
+// the participants. Per Megan Ducote's Community Legibility Spec, a community
+// reports "an anonymized, aggregate shape" carrying "the shape of activity,
+// never the content, and never participant identities" (Local Assembly,
+// doi.org/10.6084/m9.figshare.32772147; Dual-Ledger Authentication,
+// doi.org/10.6084/m9.figshare.32576631). See hybrid-dialogue#2. So the export
+// carries the harvest, the node, the tags present as theme nodes (with counts),
+// and the time it was captured. No display names, no message bodies.
 export type KumuExportInput = {
   harvestTitle: string;
   nodeTitle: string;
-  participants: string[];
+  tagCounts: Partial<Record<ContributionTag, number>>;
+  capturedAt?: string;
 };
 
 function csvCell(value: string): string {
@@ -48,23 +57,33 @@ function csvRow(cells: string[]): string {
   return cells.map(csvCell).join(",");
 }
 
+function tagLabel(tag: ContributionTag): string {
+  return tag.charAt(0).toUpperCase() + tag.slice(1);
+}
+
 export function buildKumuCsv(input: KumuExportInput): {
   elements: string;
   connections: string;
 } {
-  const elements = [
-    csvRow(["Label", "Type"]),
-    csvRow([input.harvestTitle, "Harvest"]),
-  ].join("\n");
+  const captured = input.capturedAt ?? "";
+  const elementRows = [
+    csvRow(["Label", "Type", "Count", "Captured"]),
+    csvRow([input.harvestTitle, "Harvest", "", captured]),
+    csvRow([input.nodeTitle, "Node", "", ""]),
+  ];
 
   const connectionRows = [csvRow(["From", "To", "Type"])];
-  for (const person of input.participants) {
-    connectionRows.push(csvRow([person, input.harvestTitle, "Harvested"]));
+  for (const tag of CONTRIBUTION_TAGS) {
+    const count = input.tagCounts[tag] ?? 0;
+    if (count <= 0) continue;
+    const label = tagLabel(tag);
+    elementRows.push(csvRow([label, "Theme", String(count), ""]));
+    connectionRows.push(csvRow([label, input.harvestTitle, "Surfaced"]));
   }
-  connectionRows.push(
-    csvRow([input.harvestTitle, input.nodeTitle, "Harvested"])
-  );
-  const connections = connectionRows.join("\n");
+  connectionRows.push(csvRow([input.harvestTitle, input.nodeTitle, "Harvested"]));
 
-  return { elements, connections };
+  return {
+    elements: elementRows.join("\n"),
+    connections: connectionRows.join("\n"),
+  };
 }
