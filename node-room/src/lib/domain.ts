@@ -8,6 +8,23 @@ export const CONTRIBUTION_TAGS = [
 ] as const;
 export type ContributionTag = (typeof CONTRIBUTION_TAGS)[number];
 
+// Display labels and point-of-use definitions for the contribution kinds.
+// Single source of truth: the composer chips and the /about page both read
+// these, so a wording change stays consistent across the app.
+export const TAG_LABELS: Record<ContributionTag, string> = {
+  question: "Question",
+  story: "Story",
+  challenge: "Challenge",
+  synthesis: "Synthesis",
+};
+
+export const TAG_DEFINITIONS: Record<ContributionTag, string> = {
+  question: "something you are opening for the group",
+  story: "something from your own experience",
+  challenge: "a push against an idea on the table",
+  synthesis: "pulling threads together",
+};
+
 export function isValidTag(value: unknown): value is ContributionTag {
   return (
     typeof value === "string" &&
@@ -58,7 +75,7 @@ function csvRow(cells: string[]): string {
 }
 
 function tagLabel(tag: ContributionTag): string {
-  return tag.charAt(0).toUpperCase() + tag.slice(1);
+  return TAG_LABELS[tag];
 }
 
 export function buildKumuCsv(input: KumuExportInput): {

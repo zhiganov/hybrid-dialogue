@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CONTRIBUTION_TAGS, TAG_DEFINITIONS, TAG_LABELS } from "@/lib/domain";
 
 export default function About() {
   return (
@@ -72,18 +73,11 @@ export default function About() {
           Claude weave and the facilitator harvest:
         </p>
         <ul className="kinds">
-          <li>
-            <strong>Question</strong>, something you are opening for the group.
-          </li>
-          <li>
-            <strong>Story</strong>, something from your own experience.
-          </li>
-          <li>
-            <strong>Challenge</strong>, a push against an idea on the table.
-          </li>
-          <li>
-            <strong>Synthesis</strong>, pulling threads together.
-          </li>
+          {CONTRIBUTION_TAGS.map((t) => (
+            <li key={t}>
+              <strong>{TAG_LABELS[t]}</strong>, {TAG_DEFINITIONS[t]}.
+            </li>
+          ))}
         </ul>
       </section>
 

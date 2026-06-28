@@ -1,7 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { CONTRIBUTION_TAGS, POLL_INTERVAL_MS, type ContributionTag } from "@/lib/domain";
+import {
+  CONTRIBUTION_TAGS,
+  POLL_INTERVAL_MS,
+  TAG_DEFINITIONS,
+  TAG_LABELS,
+  type ContributionTag,
+} from "@/lib/domain";
 
 type UiMessage = {
   id: number;
@@ -257,27 +263,31 @@ export function RoomClient(props: {
           </p>
         </div>
         <div className="composer-row">
-          <span className="composer-tag">
-            <label className="field-label" htmlFor="tag">
-              Kind
-            </label>
-            <select
-              id="tag"
-              value={tag}
-              onChange={(e) => setTag(e.target.value as ContributionTag | "")}
-            >
-              <option value="">No tag</option>
-              {CONTRIBUTION_TAGS.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
-          </span>
+          <div className="tag-pick" role="group" aria-label="Mark the kind of contribution (optional)">
+            <span className="tag-pick-label">Kind</span>
+            {CONTRIBUTION_TAGS.map((t) => (
+              <button
+                key={t}
+                type="button"
+                className={`tag-toggle tag-toggle--${t}`}
+                aria-pressed={tag === t}
+                aria-describedby="kind-gloss"
+                title={TAG_DEFINITIONS[t]}
+                onClick={() => setTag(tag === t ? "" : t)}
+              >
+                {TAG_LABELS[t]}
+              </button>
+            ))}
+          </div>
           <button className="btn btn--primary" type="submit" disabled={sending}>
             {sending ? "Posting" : "Post"}
           </button>
         </div>
+        <p className="tag-gloss" id="kind-gloss" aria-live="polite">
+          {tag
+            ? `${TAG_LABELS[tag]}: ${TAG_DEFINITIONS[tag]}.`
+            : "Optional. Mark the kind to help the weave and harvest."}
+        </p>
         {sendError ? (
           <p className="notice notice--error" role="alert">
             Your message did not send. It is still here, so you can try again.
