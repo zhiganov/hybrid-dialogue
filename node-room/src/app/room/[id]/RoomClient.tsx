@@ -132,6 +132,7 @@ export function RoomClient(props: {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="How you want to appear in the room"
+            autoFocus
             required
           />
           {joinError ? (

@@ -106,7 +106,7 @@ export function ManageClient(props: { roomId: string; nodeTitle: string }) {
           Ask Claude to post one weave now, connecting what people have said.
           Claude also weaves on its own as the conversation grows.
         </p>
-        <div className="btn-row" style={{ marginTop: "var(--space-4)" }}>
+        <div className="btn-row">
           <button className="btn btn--primary" onClick={weaveNow} disabled={busy !== null}>
             {busy === "weave" ? "Weaving" : "Weave now"}
           </button>
@@ -119,7 +119,7 @@ export function ManageClient(props: { roomId: string; nodeTitle: string }) {
         <p className="field-hint">
           Distill the conversation into a draft, edit it freely, then finalize.
         </p>
-        <div className="btn-row" style={{ margin: "var(--space-4) 0" }}>
+        <div className="btn-row">
           <button className="btn btn--quiet" onClick={generateHarvest} disabled={busy !== null}>
             {busy === "harvest" ? "Generating" : hasHarvest ? "Regenerate draft" : "Generate draft"}
           </button>
@@ -136,7 +136,7 @@ export function ManageClient(props: { roomId: string; nodeTitle: string }) {
             placeholder="Generate a draft to begin, or write the harvest yourself."
           />
         </div>
-        <div className="btn-row" style={{ marginTop: "var(--space-4)" }}>
+        <div className="btn-row">
           <button
             className="btn btn--quiet"
             onClick={() => saveHarvest(false)}
