@@ -57,6 +57,13 @@ export default async function Home() {
           Start a conversation room
         </Link>
       </p>
+
+      <p className="field-hint">
+        <Link className="link" href="/transparency">
+          Under the hood
+        </Link>
+        : which AI is used, and what it is told to do.
+      </p>
     </main>
   );
 }

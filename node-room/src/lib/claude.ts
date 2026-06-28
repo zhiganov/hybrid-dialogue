@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { Message, Room } from "./rooms";
 
-const STANCE = `You are a quiet facilitator in a small, asynchronous group conversation.
+export const STANCE = `You are a quiet facilitator in a small, asynchronous group conversation.
 People drop in over hours or days, so they often will not be present at the same time.
 Your role is to amplify human-to-human dialogue, not to replace it:
 - Encourage people to respond to each other, not to you.
@@ -9,6 +9,31 @@ Your role is to amplify human-to-human dialogue, not to replace it:
 - Surface connections between what different people have said, especially across visits.
 - Stay brief. Speak only when it adds something a participant could not easily add themselves.
 - Never use em dashes. Use commas, colons, periods, or parentheses instead.`;
+
+// Model assigned to each facilitator action. Single source for the calls below
+// and the /transparency page. These are generation tasks, so no Opus.
+export const MODELS = {
+  openingFrame: "claude-haiku-4-5-20251001",
+  reply: "claude-sonnet-4-6",
+  weave: "claude-sonnet-4-6",
+  harvest: "claude-sonnet-4-6",
+} as const;
+
+// The directive given for each action (appended after the room context). Exported
+// so the /transparency page shows exactly what the model is told to do.
+export const INSTRUCTIONS = {
+  openingFrame:
+    "Write a short opening frame (three or four sentences) that welcomes people into this conversation and invites a first contribution. Warm, plain, and specific to the node. Do not list rules. Write in plain prose, with no markdown formatting (no headings, bold, or bullet lists).",
+  reply:
+    "A participant addressed you with @claude. Respond briefly and helpfully, then hand the thread back to the group. Do not summarize the whole conversation; answer what was asked. Write in plain prose, with no markdown formatting.",
+  weave:
+    "Post ONE short weave. Pick the single most useful move right now: name a connection between two people's contributions, offer a brief synthesis of an emerging thread, or ask one opening question. Two or three sentences. Address the group, not any one person, and invite them to keep talking to each other. Write in plain prose, with no markdown formatting.",
+  harvest: `Distill this into a harvest a human will edit and carry forward. Include:
+1. A short title (one line).
+2. The two or three threads that mattered most, each in a sentence or two, grounded in what people actually said.
+3. Any open question worth carrying into the next conversation.
+Keep it tight and faithful. This is a draft for a human to refine, not a transcript.`,
+} as const;
 
 function client(): Anthropic {
   if (!process.env.ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY is not set");
@@ -34,7 +59,7 @@ function transcript(messages: Message[]): string {
 // Short, snappy reply when a participant writes @claude.
 export async function replyToMention(room: Room, recent: Message[]): Promise<string> {
   const res = await client().messages.create({
-    model: "claude-sonnet-4-6",
+    model: MODELS.reply,
     max_tokens: 1024,
     system: STANCE,
     messages: [
@@ -45,7 +70,7 @@ export async function replyToMention(room: Room, recent: Message[]): Promise<str
 Recent messages:
 ${transcript(recent)}
 
-A participant addressed you with @claude. Respond briefly and helpfully, then hand the thread back to the group. Do not summarize the whole conversation; answer what was asked. Write in plain prose, with no markdown formatting.`,
+${INSTRUCTIONS.reply}`,
       },
     ],
   });
@@ -55,7 +80,7 @@ A participant addressed you with @claude. Respond briefly and helpfully, then ha
 // Periodic weave: one synthesis / connection / opening question.
 export async function weave(room: Room, recent: Message[]): Promise<string> {
   const stream = client().messages.stream({
-    model: "claude-sonnet-4-6",
+    model: MODELS.weave,
     max_tokens: 2048,
     system: STANCE,
     messages: [
@@ -66,7 +91,7 @@ export async function weave(room: Room, recent: Message[]): Promise<string> {
 Recent contributions:
 ${transcript(recent)}
 
-Post ONE short weave. Pick the single most useful move right now: name a connection between two people's contributions, offer a brief synthesis of an emerging thread, or ask one opening question. Two or three sentences. Address the group, not any one person, and invite them to keep talking to each other. Write in plain prose, with no markdown formatting.`,
+${INSTRUCTIONS.weave}`,
       },
     ],
   });
@@ -76,7 +101,7 @@ Post ONE short weave. Pick the single most useful move right now: name a connect
 // Opening frame posted when the room is created.
 export async function openingFrame(room: Room): Promise<string> {
   const stream = client().messages.stream({
-    model: "claude-haiku-4-5-20251001",
+    model: MODELS.openingFrame,
     max_tokens: 2048,
     system: STANCE,
     messages: [
@@ -84,7 +109,7 @@ export async function openingFrame(room: Room): Promise<string> {
         role: "user",
         content: `${frame(room)}
 
-Write a short opening frame (three or four sentences) that welcomes people into this conversation and invites a first contribution. Warm, plain, and specific to the node. Do not list rules. Write in plain prose, with no markdown formatting (no headings, bold, or bullet lists).`,
+${INSTRUCTIONS.openingFrame}`,
       },
     ],
   });
@@ -94,7 +119,7 @@ Write a short opening frame (three or four sentences) that welcomes people into 
 // Harvest: distill the whole conversation into an editable draft.
 export async function harvestDraft(room: Room, all: Message[]): Promise<string> {
   const stream = client().messages.stream({
-    model: "claude-sonnet-4-6",
+    model: MODELS.harvest,
     max_tokens: 4096,
     system: STANCE,
     messages: [
@@ -105,11 +130,7 @@ export async function harvestDraft(room: Room, all: Message[]): Promise<string> 
 Full conversation:
 ${transcript(all)}
 
-Distill this into a harvest a human will edit and carry forward. Include:
-1. A short title (one line).
-2. The two or three threads that mattered most, each in a sentence or two, grounded in what people actually said.
-3. Any open question worth carrying into the next conversation.
-Keep it tight and faithful. This is a draft for a human to refine, not a transcript.`,
+${INSTRUCTIONS.harvest}`,
       },
     ],
   });
