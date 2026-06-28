@@ -45,7 +45,7 @@ export async function replyToMention(room: Room, recent: Message[]): Promise<str
 Recent messages:
 ${transcript(recent)}
 
-A participant addressed you with @claude. Respond briefly and helpfully, then hand the thread back to the group. Do not summarize the whole conversation; answer what was asked.`,
+A participant addressed you with @claude. Respond briefly and helpfully, then hand the thread back to the group. Do not summarize the whole conversation; answer what was asked. Write in plain prose, with no markdown formatting.`,
       },
     ],
   });
@@ -66,7 +66,7 @@ export async function weave(room: Room, recent: Message[]): Promise<string> {
 Recent contributions:
 ${transcript(recent)}
 
-Post ONE short weave. Pick the single most useful move right now: name a connection between two people's contributions, offer a brief synthesis of an emerging thread, or ask one opening question. Two or three sentences. Address the group, not any one person, and invite them to keep talking to each other.`,
+Post ONE short weave. Pick the single most useful move right now: name a connection between two people's contributions, offer a brief synthesis of an emerging thread, or ask one opening question. Two or three sentences. Address the group, not any one person, and invite them to keep talking to each other. Write in plain prose, with no markdown formatting.`,
       },
     ],
   });
@@ -84,7 +84,7 @@ export async function openingFrame(room: Room): Promise<string> {
         role: "user",
         content: `${frame(room)}
 
-Write a short opening frame (three or four sentences) that welcomes people into this conversation and invites a first contribution. Warm, plain, and specific to the node. Do not list rules.`,
+Write a short opening frame (three or four sentences) that welcomes people into this conversation and invites a first contribution. Warm, plain, and specific to the node. Do not list rules. Write in plain prose, with no markdown formatting (no headings, bold, or bullet lists).`,
       },
     ],
   });
