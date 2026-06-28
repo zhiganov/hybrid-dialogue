@@ -1,94 +1,87 @@
-# Field catalogue → node-room integration — design
+# Field catalogue → node-room integration + live lobby — design
 
 **Date:** 2026-06-28
-**Status:** approved design, ready for implementation plan
+**Status:** approved design (revised with lobby), ready for implementation plan
 **Repo:** `zhiganov/hybrid-dialogue` (`invitation-generator/` + `node-room/`)
 
 ## Goal
 
-Turn each conversation in the static field catalogue (Beat 2) into a doorway to a live, shared node-room conversation (Beat 3). Today the catalogue lets a reader "Add to my list" (localStorage) and copy that list — picks that lead nowhere. With node-room online, each invitation becomes one persistent shared room: everyone who picks a conversation meets in the same room, and "my list" becomes the set of rooms a reader has joined.
+Make the conversations in the field catalogue (Beat 2) lead into live, shared node-room rooms (Beat 3), and make all the actual conversations discoverable. Today the catalogue lets a reader "Add to my list" (localStorage) and copy that list, picks that lead nowhere. After this work:
+
+1. Each catalogue invitation links into one persistent shared room.
+2. node-room's home page becomes a **live lobby** that lists the conversations, so the six we proposed are not the only ones, members can open their own and everyone can find them.
+
+The six generated invitations are explicitly a *starting set* (our analysis of the survey). Group members will have other conversations in mind; the design must let them add their own and have them appear.
 
 ## Decisions (settled in brainstorming)
 
-1. **Shared rooms, one per invitation.** Not ad-hoc per-person rooms. Everyone who enters conversation N lands in the same room N.
-2. **Page stays static.** No live room state (no participant counts/activity). The page is regenerated with room links baked in; it never calls node-room at view time.
-3. **Reusable generator step.** Room provisioning is a pipeline step driven by the invitations JSON, idempotent across re-runs, usable for any future inquiry, not a one-off for the current six.
+1. **Shared rooms, one per invitation.** Everyone who enters conversation N lands in the same room N.
+2. **The catalogue stays static.** The Netlify page is regenerated with room links baked in; it never calls node-room at view time. (This is about the catalogue surface only.)
+3. **Reusable generator step.** Room provisioning is a pipeline step driven by the invitations JSON, idempotent across re-runs.
+4. **node-room home page becomes a live lobby.** This is a *different* surface from the static catalogue: node-room is already a dynamic, DB-backed app, so a lobby there is natural and does not conflict with decision 2.
+5. **Listing model = a `listed` flag.** Rooms carry a `listed` boolean. The lobby shows listed rooms; the convener can unlist junk. This is the control point because `/create` is open to anyone.
+6. **Members propose conversations via `/create`** (already built and unauthenticated). The catalogue gets a "Propose another conversation" link to it.
 
-## Architecture
+## Architecture — two tracks, one feature
 
-One new step between `generate.py` and `render_html.py`:
+### Track A — node-room (the app): lobby + `listed` flag
+
+- **Migration `002_add_listed.sql`:** `ALTER TABLE rooms ADD COLUMN listed BOOLEAN NOT NULL DEFAULT true;` Additive; existing rooms become listed. Run manually against the Postgres public URL (node-room convention; see deployments.md).
+- **`rooms.ts`:**
+  - `createRoom` accepts `listed` (default `true`).
+  - `listRooms()` returns rooms `WHERE listed = true`, each with title, description, participant count, message count, and last-activity timestamp, ordered by last activity (then `created_at`) descending. Empty listed rooms still appear (a freshly opened conversation is a valid invitation; we do not gate the lobby on message count, to avoid a chicken-and-egg where the curated rooms never show because no one has posted yet).
+  - `setRoomListed(roomId, listed)` updates the flag.
+- **`POST /api/rooms`** accepts an optional `listed` in the body (default `true`).
+- **`PATCH /api/rooms/[id]`** (new, facilitator-gated via `requireFacilitator`): body `{ listed: boolean }` → `setRoomListed`. The convener's kill switch.
+- **Home page `/` (`app/page.tsx`)** becomes an async server component: query `listRooms()`, render the list (title, one-line description, participant count, last-activity "x ago", link to the room), keep the "Create a conversation room" link, and show a calm empty state when there are none.
+- **Manage page (`ManageClient` + the new PATCH route):** add a "Show in lobby" toggle so the facilitator can list/unlist their room.
+- **Privacy note:** the lobby makes `/` a public index of listed conversations. Add `noindex` to node-room pages so the inquiry is not search-indexed (the catalogue already sets `noindex`).
+
+### Track B — generator (catalogue): provisioning + links
+
+- **`invitation-generator/create_rooms.py` (new).** Reads an `invitations-<date>.json`; node-room base URL from `--base` / env `NODE_ROOM_URL` (default the Railway URL). For each invitation, `POST {base}/api/rooms` with `nodeTitle` = title, `nodeDescription` = framing, `facilitationPrompt` = a short general brief (framing + contribution kinds, no named survey quotes), `listed: true`. Writes a mapping `rooms-<date>.json` (keyed by `slug(title)`) holding `room_id`, `facilitator_token`, `room_url`, `manage_url`.
+  - **Idempotency:** reuse any slug already in the mapping; create only missing ones; write back. Renaming a conversation yields a new room (old one orphaned, harmless). The local map is the source of truth (node-room has no find-by-title; IDs are random).
+  - **Error handling:** per-invitation try/except; failures leave the slug unmapped; a later re-run fills the gap; `render_html` degrades gracefully.
+- **`render_html.py` (changed):**
+  - New optional `--rooms rooms-<date>.json`; build `slug → room_url`.
+  - Per card with a room: a prominent **"Enter the conversation →"** anchor (new tab) plus `data-room="<url>"`. Without a room: render as today (save toggle only).
+  - Keep the "Add to my list" toggle; "my list" now means bookmarked rooms. Export (`asMarkdown` / `asMessage`) includes each pick's room URL.
+  - Add two global links in the masthead/footer: **"Propose another conversation →"** to `{base}/create`, and **"See all live conversations →"** to `{base}/` (the lobby).
+
+## Data flow & boundaries
 
 ```
 survey CSV → generate.py → invitations-<date>.json
                               ↓
-                      create_rooms.py        (NEW)  → node-room POST /api/rooms
+                      create_rooms.py → node-room POST /api/rooms (listed:true)
                               ↓
                   rooms-<date>.json (private, gitignored)
                               ↓
-            render_html.py (JSON + room map) → invitations-<date>.html (public room links)
-                              ↓
-                         Netlify deploy
+            render_html.py (JSON + room map) → catalogue HTML (public room links + lobby link)
+                              ↓                                    ↑
+                         Netlify deploy            node-room lobby (/) lists listed rooms
 ```
 
-### Component 1 — `invitation-generator/create_rooms.py` (new)
-
-- **Input:** an `invitations-<date>.json`; the node-room base URL (CLI arg / env `NODE_ROOM_URL`, default `https://node-room-web-production.up.railway.app`).
-- **Per invitation**, call `POST {base}/api/rooms` with:
-  - `nodeTitle` = `title`
-  - `nodeDescription` = `framing`
-  - `facilitationPrompt` = a short, **general** facilitator brief built from the framing plus the contribution kinds to invite. It does **not** quote or name individual survey respondents (so Claude's opening frame stays general and does not name people who may not show up).
-- **Output mapping** `rooms-<date>.json`:
-  ```json
-  {
-    "base_url": "https://node-room-web-production.up.railway.app",
-    "rooms": {
-      "<title-slug>": {
-        "title": "...",
-        "room_id": "...",
-        "facilitator_token": "...",
-        "room_url": "{base}/room/{id}",
-        "manage_url": "{base}/room/{id}/manage?key={token}"
-      }
-    }
-  }
-  ```
-- **Idempotency:** key by `slug(title)`. On run, load an existing `rooms-<date>.json` if present; reuse any slug already mapped (no new room), create only missing ones, write the map back. Renaming a conversation yields a new slug, hence a new room (the old one is orphaned, harmless). There is no node-room "find room by title" API and IDs are random, so this local map is the source of truth for idempotency. (Chosen over adding a slug/create-or-get system to node-room, which would be scope creep.)
-- **Error handling:** per-invitation try/except; on failure, log and continue, leaving that slug unmapped. A later re-run fills the gap. `render_html` degrades gracefully for any unmapped invitation.
-
-### Component 2 — `invitation-generator/render_html.py` (changed)
-
-- New optional input: `--rooms rooms-<date>.json`. Build a `slug → room_url` dict.
-- In `render_entries`, when a room URL exists for the invitation:
-  - add a prominent **"Enter the conversation →"** anchor (opens the room in a new tab),
-  - add `data-room="<url>"` on the `.entry` article.
-- Keep the existing "Add to my list" toggle. The "my list" filter and the sticky footer stay, but now mean "rooms I've bookmarked."
-- If no room URL for an invitation: render exactly as today (save toggle only, no enter link).
-
-### Component 3 — export JS (changed, inside `render_html.py`)
-
-- `picks()` reads `data-room` per chosen card.
-- `asMarkdown` / `asMessage` include the room URL per pick, e.g. `1. <title> — <room url>`, so the copied artifact is a list of live links, not bare titles.
-
-## Data flow & boundaries
-
-- **Public (page + git):** room URLs only (`/room/<id>`).
-- **Private (convener only, gitignored):** `rooms-<date>.json` holds the facilitator tokens and `/manage?key=…` links that gate harvest + export. It lives in `output/` (already gitignored alongside PII-bearing artifacts). The convener (Ben/Artem) holds these to run each room's harvest.
-- `ANTHROPIC_API_KEY` stays in Railway; the opening frame is generated server-side by node-room. `create_rooms.py` needs no key (POST `/api/rooms` is unauthenticated by design).
-- Running `create_rooms.py` against the production base URL **provisions real live rooms**. That is the intended effect; it is the act of opening the conversations.
+- **Public:** catalogue room URLs (`/room/<id>`); the lobby at `/` listing listed rooms.
+- **Private (convener only, gitignored `output/rooms-<date>.json`):** facilitator tokens and `/manage?key=…` links that gate weave/harvest/export/unlist.
+- `ANTHROPIC_API_KEY` stays in Railway; opening frames are generated server-side. `create_rooms.py` needs no key.
+- Running `create_rooms.py` against production provisions real live rooms; that is the intended act of opening the conversations.
 
 ## Testing
 
-- **Unit (idempotency):** given a pre-populated `rooms-<date>.json`, the create call is not made for mapped slugs; an unmapped slug triggers exactly one create. Mock the HTTP call.
-- **Unit (render):** an invitation with a room URL renders the enter link + `data-room`; one without renders the current fallback.
-- **Manual end-to-end:** run the full pipeline against live node-room, open the regenerated page, click a generated link, confirm it lands in the room and a name can be entered.
+- **node-room unit:** `listRooms()` returns only `listed` rooms with correct counts/order; `setRoomListed` flips the flag; `PATCH` is facilitator-gated (rejects without the key). Add to the existing `src/lib` tests where they are CI-gated.
+- **node-room manual:** run migration 002 on the public URL; create two rooms (one listed, one not); confirm only the listed one shows on `/`; toggle via the manage page and confirm it appears/disappears.
+- **generator unit:** idempotency (existing map → no recreate; new slug → one create, mocked HTTP); render (room present → enter link + `data-room`; absent → fallback; Propose/lobby links always present).
+- **end-to-end:** run the full pipeline against live node-room, open the regenerated catalogue, click "Enter", land in the room; open `/` and see it listed; open `/create`, make a room, see it appear in the lobby.
 
 ## Out of scope (YAGNI)
 
-- Live room state on the page (counts, activity, "who's inside").
-- Identity/name handoff from page to room — readers enter their name in node-room as today.
-- Rebuilding the catalogue as a node-room-served dynamic "lobby" (a possible future direction; not built).
-- A slug / create-or-get API in node-room (idempotency stays in the local map).
+- Identity/name handoff from catalogue to room (readers enter their name in node-room as today).
+- Rich lobby features: search, filters, categories, per-room activity sparklines. The v1 lobby is a single ordered list.
+- Member-room curation workflow beyond the convener's list/unlist toggle (no approval queue).
+- Replacing the static catalogue with a node-room-served editorial page; the two surfaces coexist (catalogue = editorial front door, lobby = live index).
 
-## Inherent trade-off
+## Trade-offs
 
-Rooms sit empty until people arrive, and the convener holds one facilitator/manage link per room (six for the current cohort). This is inherent to the shared-room model and accepted.
+- Rooms can sit empty until people arrive, and the convener holds one facilitator/manage link per curated room. Inherent to the shared-room model.
+- The lobby makes listed conversations publicly visible at the Railway URL (mitigated by `noindex` and the `listed` flag default the convener controls). For a small, privately-shared inquiry this is acceptable.
