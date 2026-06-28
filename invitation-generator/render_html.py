@@ -291,13 +291,13 @@ JS = r"""
     });
   }
   function asMarkdown(p){
-    var s='# My conversations — Hybrid Dialogue\n\n';
+    var s='# My conversations - Hybrid Dialogue\n\n';
     p.forEach(function(it){ s+='- **'+it.title+'**'+(it.room?'  '+it.room:'')+'\n'; });
     return s;
   }
   function asMessage(p){
     var s="I'd like to join "+p.length+" of the conversations:\n";
-    p.forEach(function(it,i){ s+=(i+1)+'. '+it.title+(it.room?' — '+it.room:'')+'\n'; });
+    p.forEach(function(it,i){ s+=(i+1)+'. '+it.title+(it.room?' - '+it.room:'')+'\n'; });
     return s.trim();
   }
 
