@@ -441,6 +441,20 @@ textarea::placeholder {
   flex-direction: column;
   gap: var(--space-2);
 }
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--ink);
+}
+.toggle input {
+  width: 1.1rem;
+  height: 1.1rem;
+  accent-color: var(--clay);
+}
 
 /* ---- Manage panels ---- */
 .panel {

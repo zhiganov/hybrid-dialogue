@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { STANCE, MODELS, INSTRUCTIONS } from "@/lib/claude";
+import { FacilitatorToggle } from "./FacilitatorToggle";
 
 const SOURCE =
   "https://github.com/zhiganov/hybrid-dialogue/blob/main/node-room/src/lib/claude.ts";
@@ -65,6 +66,19 @@ export default function Transparency() {
             node-room/src/lib/claude.ts
           </a>
           . To change them, edit that file and open a pull request; the change deploys on merge.
+        </p>
+      </section>
+
+      <section className="panel">
+        <h2 className="section-title">Help facilitate</h2>
+        <p className="entry-body">
+          Anyone can step into the facilitator role: ask Claude for a weave, write and
+          finalize the harvest, and export it. These actions use the host&apos;s AI budget,
+          so please use them considerately. A proper sign-in will replace this later.
+        </p>
+        <FacilitatorToggle />
+        <p className="field-hint">
+          With this on, each conversation shows a &ldquo;Facilitate this conversation&rdquo; link.
         </p>
       </section>
 

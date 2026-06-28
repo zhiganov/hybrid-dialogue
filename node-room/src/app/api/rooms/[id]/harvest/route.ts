@@ -1,12 +1,19 @@
 import type { NextRequest } from "next/server";
 import { finalizeHarvest, getAllMessages, getHarvest, saveHarvestDraft } from "@/lib/rooms";
 import { requireFacilitator } from "@/lib/facilitator";
+import { rateLimit } from "@/lib/ratelimit";
 import { harvestDraft } from "@/lib/claude";
 
 export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
   const gate = await requireFacilitator(req, id);
   if ("error" in gate) return gate.error;
+  if (!rateLimit(`harvest:${id}`, 12, 60 * 60 * 1000)) {
+    return Response.json(
+      { error: "rate_limited", message: "The harvest has been generated several times in the last hour. Please wait a little before generating again." },
+      { status: 429 }
+    );
+  }
   const all = await getAllMessages(id);
   const draft = await harvestDraft(gate.room, all);
   const harvest = await saveHarvestDraft(id, draft);

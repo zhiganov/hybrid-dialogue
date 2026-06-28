@@ -35,7 +35,8 @@ export function ManageClient(props: { roomId: string; nodeTitle: string; listed:
     try {
       const res = await fetch(`/api/rooms/${roomId}/weave?key=${key}`, { method: "POST" });
       if (!res.ok) {
-        setError("The weave did not post. Please try again.");
+        const d = await res.json().catch(() => null);
+        setError(d?.message ?? "The weave did not post. Please try again.");
         return;
       }
       setWeaveNote("A weave was posted to the room.");
@@ -74,7 +75,8 @@ export function ManageClient(props: { roomId: string; nodeTitle: string; listed:
     try {
       const res = await fetch(`/api/rooms/${roomId}/harvest?key=${key}`, { method: "POST" });
       if (!res.ok) {
-        setError("Could not generate a draft. Please try again.");
+        const d = await res.json().catch(() => null);
+        setError(d?.message ?? "Could not generate a draft. Please try again.");
         return;
       }
       const d = await res.json();

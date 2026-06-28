@@ -42,11 +42,13 @@ export function RoomClient(props: {
   const [tag, setTag] = useState<ContributionTag | "">("");
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState(false);
+  const [facMode, setFacMode] = useState(false);
   const sinceRef = useRef(0);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setToken(localStorage.getItem(tokenKey(roomId)));
+    setFacMode(localStorage.getItem("facilitator-mode") === "1");
   }, [roomId]);
 
   const poll = useCallback(async () => {
@@ -127,6 +129,13 @@ export function RoomClient(props: {
         <div className="page-head">
           <h1 className="title">{props.nodeTitle}</h1>
           <p className="lede">{props.nodeDescription}</p>
+          {facMode ? (
+            <p className="field-hint">
+              <a className="link" href={`/room/${roomId}/manage`}>
+                Facilitate this conversation
+              </a>
+            </p>
+          ) : null}
         </div>
         <section className="howto">
           <p className="field-label">How this works</p>
@@ -175,6 +184,13 @@ export function RoomClient(props: {
       <header className="page-head">
         <h1 className="title">{props.nodeTitle}</h1>
         <p className="lede">{props.nodeDescription}</p>
+        {facMode ? (
+          <p className="field-hint">
+            <a className="link" href={`/room/${roomId}/manage`}>
+              Facilitate this conversation
+            </a>
+          </p>
+        ) : null}
       </header>
 
       <ol className="thread" aria-live="polite" aria-label="Conversation">
