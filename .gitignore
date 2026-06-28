@@ -11,3 +11,6 @@ invitation-generator/output/
 
 # subagent-driven-development scratch ledger
 .superpowers/
+
+# python bytecode cache
+__pycache__/
