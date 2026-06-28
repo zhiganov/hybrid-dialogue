@@ -55,8 +55,13 @@ export function RoomClient(props: {
     const data = (await res.json()) as { messages: UiMessage[] };
     setLoaded(true);
     if (data.messages.length) {
-      sinceRef.current = data.messages[data.messages.length - 1].id;
-      setMessages((prev) => [...prev, ...data.messages]);
+      const maxId = Math.max(...data.messages.map((m) => m.id));
+      sinceRef.current = Math.max(sinceRef.current, maxId);
+      setMessages((prev) => {
+        const known = new Set(prev.map((m) => m.id));
+        const fresh = data.messages.filter((m) => !known.has(m.id));
+        return fresh.length ? [...prev, ...fresh] : prev;
+      });
     }
   }, [roomId]);
 

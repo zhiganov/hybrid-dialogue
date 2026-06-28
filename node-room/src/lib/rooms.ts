@@ -200,7 +200,7 @@ const toHarvest = (r: HarvestRow): Harvest => ({
 export async function saveHarvestDraft(roomId: string, body: string): Promise<Harvest> {
   const rows = await query<HarvestRow>(
     `INSERT INTO harvests (room_id, body) VALUES ($1,$2)
-     ON CONFLICT (room_id) DO UPDATE SET body = EXCLUDED.body
+     ON CONFLICT (room_id) DO UPDATE SET body = EXCLUDED.body, finalized_at = NULL
      RETURNING *`,
     [roomId, body]
   );

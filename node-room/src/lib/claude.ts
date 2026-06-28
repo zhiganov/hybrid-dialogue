@@ -56,7 +56,7 @@ A participant addressed you with @claude. Respond briefly and helpfully, then ha
 export async function weave(room: Room, recent: Message[]): Promise<string> {
   const stream = client().messages.stream({
     model: "claude-opus-4-8",
-    max_tokens: 1024,
+    max_tokens: 2048,
     thinking: { type: "adaptive" },
     system: STANCE,
     messages: [
@@ -78,7 +78,7 @@ Post ONE short weave. Pick the single most useful move right now: name a connect
 export async function openingFrame(room: Room): Promise<string> {
   const stream = client().messages.stream({
     model: "claude-opus-4-8",
-    max_tokens: 1024,
+    max_tokens: 2048,
     thinking: { type: "adaptive" },
     system: STANCE,
     messages: [
