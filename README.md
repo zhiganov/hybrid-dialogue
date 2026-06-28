@@ -18,7 +18,9 @@ The inquiry runs as four beats:
 | Path | Beat | What it is | Status |
 | --- | --- | --- | --- |
 | [`invitation-generator/`](./invitation-generator/) | MAP | Reads the participant survey and proposes a right-sized, grounded set of conversation invitations + people recommendations, with Kumu-ready output | ✅ Built |
-| [`docs/plans/2026-06-27-node-room-design.md`](./docs/plans/2026-06-27-node-room-design.md) | DROP INTO | Spec for a small-group live "node room" with Claude as facilitator, replacing the bare per-conversation Google Doc | 📝 Spec |
+| [`node-room/`](./node-room/) | DROP INTO + HARVEST | Async small-group conversation room with Claude as a quiet facilitator; the harvest exports an anonymized shape to Kumu, and rooms are listed in a lobby on the home page. | ✅ Built |
+
+**Facilitator access is interim.** A node room is managed through a private capability link (`/room/<id>/manage?key=...`) rather than accounts; replacing that with real auth and role-based, in-room controls is tracked in [#6](https://github.com/zhiganov/hybrid-dialogue/issues/6).
 
 ## The invitation generator
 
