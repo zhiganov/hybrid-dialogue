@@ -18,9 +18,9 @@ The inquiry runs as four beats:
 | Path | Beat | What it is | Status |
 | --- | --- | --- | --- |
 | [`invitation-generator/`](./invitation-generator/) | MAP | Reads the participant survey and proposes a right-sized, grounded set of conversation invitations + people recommendations, with Kumu-ready output | ✅ Built |
-| [`node-room/`](./node-room/) | DROP INTO + HARVEST | Async small-group conversation room with Claude as a quiet facilitator; the harvest exports an anonymized shape to Kumu, and rooms are listed in a lobby on the home page. | ✅ Built |
+| [`node-room/`](./node-room/) | DROP INTO + HARVEST | Async small-group conversation room with Claude as a quiet facilitator; rooms are listed in a lobby on the home page, an About page explains how it works, and the harvest exports an anonymized shape to Kumu. | ✅ Built |
 
-**Facilitator access is interim.** A node room is managed through a private capability link (`/room/<id>/manage?key=...`) rather than accounts; replacing that with real auth and role-based, in-room controls is tracked in [#6](https://github.com/zhiganov/hybrid-dialogue/issues/6).
+**Facilitation is open, for now.** Rather than accounts, anyone can step into the facilitator role (ask Claude for a weave, write and finalize the harvest, export it) by switching on "Facilitator mode" at the bottom of the `/transparency` page. Because those actions spend the host's AI budget, weaving and harvesting are rate limited per conversation. Replacing this with real auth and role-based, in-room controls is tracked in [#6](https://github.com/zhiganov/hybrid-dialogue/issues/6).
 
 ## The invitation generator
 
