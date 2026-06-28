@@ -17,7 +17,7 @@ It deliberately goes past topic-clustering to include:
 
 ## How it fits the inquiry
 
-The inquiry runs as an arc: people **express** (a survey) → the responses are **mapped** into this set of conversations → people **drop into** the ones that pull them (each becomes a node on a Kumu map and a WhatsApp group) → each conversation **harvests** something worth keeping. This tool is the *map* step.
+The inquiry runs as an arc: people **express** (a survey) → the responses are **mapped** into this set of conversations → people **drop into** the ones that pull them (each becomes a node on a Kumu map and a live room in [node-room](../node-room/)) → each conversation **harvests** something worth keeping. This tool is the *map* step.
 
 ## What it produces
 
@@ -30,13 +30,21 @@ For a survey CSV it writes (to `output/`):
 
 ## Read it as a web page
 
-A long markdown brief doesn't get read. `render_html.py` turns the JSON into a single, navigable HTML page — each conversation as a card you can filter by kind, plus a lightweight **curation layer**: set each to keep / maybe / cut, uncheck people who don't fit, and a "Copy curation as Markdown" button that exports the decisions to paste back. (Following [Thariq Shihipar's HTML-over-Markdown approach](https://claude.com/blog/using-claude-code-the-unreasonable-effectiveness-of-html).)
+A long markdown brief doesn't get read. `render_html.py` turns the JSON into a single, self-contained HTML page: a calm "programme" of the conversations. Each one shows its framing and a **join this conversation** button into its live [node-room](../node-room/) room, with the supporting detail (the voices it came from, who might fit, who is not yet here) folded into a collapsed accordion so the page stays short. A Contents list and a filter-by-kind sit on top. (Following [Thariq Shihipar's HTML-over-Markdown approach](https://claude.com/blog/using-claude-code-the-unreasonable-effectiveness-of-html).)
 
 ```sh
-python render_html.py --input output/invitations-<date>.json
+# --rooms wires each "join" button to its live room (and the masthead links)
+python render_html.py --input output/invitations-<date>.json --rooms output/rooms-<date>.json
 ```
 
-It reads the existing JSON — no API call — and writes `output/invitations-<date>.html`. Open it locally, or upload the single file anywhere static (e.g. Netlify) to share a link. The reader's keep/cut/note choices are saved only in their own browser (localStorage); nothing is sent anywhere.
+It reads the JSON (no API call) and writes `output/invitations-<date>.html`. Em and en dashes in the content are normalized to commas on render, and nothing is sent anywhere. To deploy, copy that file into a folder holding only `index.html` (so the rest of `output/` and its PII stay out) and push it to Netlify:
+
+```sh
+cp output/invitations-<date>.html output/site/index.html
+netlify deploy --prod --dir=output/site --site=<site-id> --no-build
+```
+
+Earlier versions had an in-page curation layer (keep / cut / copy-your-list). That was the signup path before [node-room](../node-room/) shipped; now you join by entering the live room, so that machinery was removed.
 
 ## The prompt
 

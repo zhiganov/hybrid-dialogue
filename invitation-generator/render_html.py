@@ -1,19 +1,23 @@
 #!/usr/bin/env python3
 """
-Render the invitation-generator JSON into a single, navigable, interactive HTML page.
+Render the invitation-generator JSON into a single, navigable HTML page.
 
-Design: a naturalist's field catalogue (see DESIGN.md / PRODUCT.md) — warm paper,
-sepia ink, specimen entries with classification tags and margin annotations.
+Design: a printed programme of conversations (see DESIGN.md / PRODUCT.md in
+../node-room for the brand world). Warm paper and ink, one clay accent, confident
+index numbers, real participant voices as the texture. Calm, legible, human;
+deliberately out of the saturated "AI editorial" template.
 
-It's an artifact for the whole group, not just the convener. Following Thariq
-Shihipar's "HTML over Markdown" idea (a long brief doesn't get read or acted on),
-each reader marks the conversations that pull them and "ends with an export":
-copies their own picks to share or sign up.
+Since node-room shipped, each conversation has a live room you enter via its
+"join this conversation" link, so this page is a *lobby/index*, not a
+curate-and-export catalogue. Each entry shows its framing and a join link, with
+the supporting detail (voices, who fits, who is not yet here) folded into a
+collapsed accordion to keep the page short.
 
 Reads the JSON that generate.py wrote; emits one self-contained HTML file (no build).
 
 Usage:
-  python render_html.py --input output/invitations-2026-06-27.json
+  python render_html.py --input output/invitations-2026-06-27.json \
+      --rooms output/rooms-2026-06-27.json
 """
 import argparse
 import datetime
@@ -25,11 +29,13 @@ import re
 
 HERE = pathlib.Path(__file__).parent
 
+# The four conversation kinds. The WORD carries the meaning; there is no
+# per-kind colour (one accent only), which is both calmer and less templated.
 TYPES = {
-    "content":    {"label": "Content",    "color": "oklch(0.5 0.08 150)"},
-    "tension":    {"label": "Tension",    "color": "oklch(0.52 0.13 38)"},
-    "process":    {"label": "Process",    "color": "oklch(0.46 0.08 256)"},
-    "relational": {"label": "Relational", "color": "oklch(0.6 0.1 75)"},
+    "content":    {"label": "Content"},
+    "tension":    {"label": "Tension"},
+    "process":    {"label": "Process"},
+    "relational": {"label": "Relational"},
 }
 
 WORDS = {1: "One", 2: "Two", 3: "Three", 4: "Four", 5: "Five", 6: "Six",
@@ -37,284 +43,280 @@ WORDS = {1: "One", 2: "Two", 3: "Three", 4: "Four", 5: "Five", 6: "Six",
 
 
 def e(s: str) -> str:
+    """Escape for HTML (attributes and URLs)."""
     return html.escape(str(s), quote=True)
+
+
+def nd(s: str) -> str:
+    """Deterministically strip em/en dashes from display copy.
+
+    Em dashes are a hard no for this user's public-facing surfaces (and a classic
+    AI tell). Replace em/en dashes with a comma; never touch hyphen-minus, so
+    hyphenated words ('follow-the-sun', 'X-Matrix') are left alone.
+    """
+    s = re.sub(r"\s*[—–]\s*", ", ", str(s))
+    s = re.sub(r",\s*,", ",", s)
+    return s
+
+
+def txt(s: str) -> str:
+    """Normalize then escape: use for all human-readable copy."""
+    return e(nd(s))
 
 
 def word(n: int) -> str:
     return WORDS.get(n, str(n))
 
 
+def kind_label(t: str) -> str:
+    return TYPES.get(t, TYPES["content"])["label"]
+
+
+def render_contents(invs):
+    rows = []
+    for i, inv in enumerate(invs, 1):
+        k = kind_label(inv.get("type", "content")).lower()
+        rows.append(
+            f'<a class="toc-row" href="#c{i}">'
+            f'<span class="toc-num">{i:02d}</span>'
+            f'<span class="toc-title">{txt(inv.get("title", ""))}</span>'
+            f'<span class="toc-kind">{e(k)}</span>'
+            f'</a>'
+        )
+    return "\n        ".join(rows)
+
+
 def render_entries(invs, room_urls):
     out = []
     for i, inv in enumerate(invs, 1):
         t = inv.get("type", "content")
-        meta = TYPES.get(t, TYPES["content"])
-        voices = "".join(f"<li>{e(v)}</li>" for v in inv.get("grounded_in", []))
+        k = kind_label(t).lower()
+
+        quotes = []
+        for g in inv.get("grounded_in", []):
+            g = str(g)
+            who, body = (g.split(": ", 1) if ": " in g else ("", g))
+            who_html = f'<span class="who">{txt(who)}</span>' if who.strip() else ""
+            quotes.append(
+                f'<p class="quote"><span class="q">{txt(body)}</span>{who_html}</p>'
+            )
+        quotes_html = "".join(quotes)
+
         people = "".join(
-            f'<li><span class="nm">{e(p["name"])}</span> '
-            f'<span class="why">{e(p["why"])}</span></li>'
+            f'<p class="person"><span class="nm">{txt(p.get("name", ""))}</span> '
+            f'<span class="why">{txt(p.get("why", ""))}</span></p>'
             for p in inv.get("recommended_participants", [])
         )
-        absent = "".join(f"<li>{e(a)}</li>" for a in inv.get("archetypes_to_invite", []))
+        absent = "".join(
+            f'<p class="arow">{txt(a)}</p>' for a in inv.get("archetypes_to_invite", [])
+        )
+
         room_url = room_urls.get(inv.get("title", ""))
-        enter = (
-            f'<a class="enter" href="{e(room_url)}" target="_blank" rel="noopener">Enter the conversation &rarr;</a>'
+        actions = (
+            f'<div class="actions"><a class="btn btn--primary" href="{e(room_url)}" target="_blank" rel="noopener">'
+            f'join this conversation <span class="arr" aria-hidden="true">&rarr;</span></a></div>'
             if room_url else ""
         )
-        data_room = f' data-room="{e(room_url)}"' if room_url else ""
+
         out.append(f"""
-      <article class="entry" data-type="{t}" id="c{i}" style="--k:{meta['color']}"{data_room}>
-        <div class="gutter">
-          <span class="acc">{i:02d}</span>
-          <span class="tag"><span class="swatch"></span>{meta['label']}</span>
-          <button class="join" aria-pressed="false"><span class="jl">Add to my list</span></button>
-          {enter}
-        </div>
-        <div class="body">
-          <h2 class="title">{e(inv.get('title',''))}</h2>
-          <p class="desc">{e(inv.get('framing',''))}</p>
-          <section class="sub">
-            <h3 class="sublabel">Collected from</h3>
-            <ul class="annot">{voices}</ul>
-          </section>
-          <section class="sub">
-            <h3 class="sublabel">Who might fit</h3>
-            <ul class="people">{people}</ul>
-          </section>
-          <section class="sub">
-            <h3 class="sublabel">Not yet in the collection</h3>
-            <ul class="absent">{absent}</ul>
-          </section>
-        </div>
+      <article class="entry" data-type="{t}" id="c{i}">
+        <p class="kind">{e(k)}</p>
+        <h2 class="title">{txt(inv.get('title', ''))}</h2>
+        <p class="framing">{txt(inv.get('framing', ''))}</p>
+        <details class="more">
+          <summary>Where this came from, and who might fit</summary>
+          <div class="more-body">
+            <section class="section">
+              <h3 class="section-label">Collected from</h3>
+              <div class="quotes">{quotes_html}</div>
+            </section>
+            <section class="section">
+              <h3 class="section-label">Who might fit</h3>
+              <div class="people">{people}</div>
+            </section>
+            <section class="section">
+              <h3 class="section-label">Not yet here</h3>
+              <div class="absent">{absent}</div>
+            </section>
+          </div>
+        </details>
+        {actions}
       </article>""")
     return "\n".join(out)
 
 
-def render_browse(invs):
+def render_filter(invs):
     present = [t for t in TYPES if any(v.get("type") == t for v in invs)]
-    tags = [f'<button class="ftag is-on" data-filter="all" aria-pressed="true">'
-            f'All <span class="ct">{len(invs)}</span></button>']
+    out = [f'<button class="ftag is-on" type="button" data-filter="all" aria-pressed="true">'
+           f'All <span class="ct">{len(invs)}</span></button>']
     for t in present:
         n = sum(1 for v in invs if v.get("type") == t)
-        tags.append(
-            f'<button class="ftag" data-filter="{t}" aria-pressed="false" style="--k:{TYPES[t]["color"]}">'
-            f'<span class="swatch"></span>{TYPES[t]["label"]} <span class="ct">{n}</span></button>'
+        out.append(
+            f'<button class="ftag" type="button" data-filter="{t}" aria-pressed="false">'
+            f'{kind_label(t)} <span class="ct">{n}</span></button>'
         )
-    tags.append('<button class="ftag ftag-mine" data-filter="mine" aria-pressed="false">'
-                'My list <span class="ct" id="mineCt">0</span></button>')
-    return "\n        ".join(tags), len(present)
+    return "\n        ".join(out), len(present)
 
 
 def render_notes(notes: str) -> str:
     parts = re.split(r"\((\d+)\)\s*", notes.strip())
-    intro = e(parts[0].strip())
-    items = "".join(f"<li>{e(parts[j+1].strip())}</li>" for j in range(1, len(parts) - 1, 2))
+    intro = txt(parts[0].strip())
+    items = "".join(f"<li>{txt(parts[j + 1].strip())}</li>" for j in range(1, len(parts) - 1, 2))
     lst = f'<ol class="notelist">{items}</ol>' if items else ""
-    return f'<p class="note-intro">{intro}</p>{lst}'
+    return f'<p class="lead">{intro}</p>{lst}'
 
 
 CSS = """
 :root{
-  --paper:oklch(0.925 0.018 80);
-  --sheet:oklch(0.955 0.013 85);
-  --ink:oklch(0.27 0.018 60);
-  --ink-soft:oklch(0.44 0.02 62);
-  --faint:oklch(0.58 0.016 68);
-  --rule:oklch(0.82 0.02 75);
-  --k:oklch(0.5 0.08 150);
+  --paper:        oklch(0.945 0.016 83);
+  --raised:       oklch(0.915 0.020 80);
+  --ink:          oklch(0.265 0.015 58);
+  --ink-soft:     oklch(0.435 0.016 58);
+  --faint:        oklch(0.505 0.016 64);
+  --hairline:     oklch(0.795 0.020 76);
+  --hairline-soft:oklch(0.865 0.016 80);
+  --clay:         oklch(0.535 0.130 45);
+  --clay-deep:    oklch(0.485 0.130 44);
+  --clay-ink:     oklch(0.455 0.125 43);
+  --clay-tint:    oklch(0.930 0.032 55);
+  --on-clay:      oklch(0.975 0.012 83);
+
+  --measure:62ch;
+  --serif:"Bitter",Georgia,"Times New Roman",serif;
+  --sans:"Atkinson Hyperlegible",system-ui,-apple-system,sans-serif;
 }
-*{box-sizing:border-box}
-html{scroll-behavior:smooth}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth; -webkit-text-size-adjust:100%}
 body{
   margin:0; background:var(--paper); color:var(--ink);
-  font-family:"Atkinson Hyperlegible",system-ui,sans-serif;
-  font-size:17px; line-height:1.62; -webkit-font-smoothing:antialiased;
+  font-family:var(--sans); font-size:1.0625rem; line-height:1.62;
+  -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+  overflow-wrap:break-word;
 }
-.wrap{max-width:53rem; margin:0 auto; padding:0 clamp(1.1rem,4vw,2.5rem) 2rem}
-::selection{background:oklch(0.85 0.06 80)}
+::selection{background:var(--clay-tint)}
+:focus-visible{outline:2px solid var(--clay); outline-offset:3px; border-radius:4px}
+.is-hidden{display:none !important}
+
+.page{max-width:44rem; margin-inline:auto; padding-inline:clamp(1.15rem,5vw,2.5rem); padding-bottom:4rem}
 
 /* masthead */
-.masthead{padding:clamp(3rem,9vw,5.5rem) 0 1.6rem}
-.kicker{font-size:.74rem; letter-spacing:.22em; text-transform:uppercase; color:var(--faint); margin:0 0 1.5rem; font-weight:700}
-.masthead h1{font-family:"Bitter",Georgia,serif; font-weight:600; color:var(--ink);
-  font-size:clamp(2.1rem,6vw,3.3rem); line-height:1.08; letter-spacing:-.005em; margin:0 0 1.1rem}
-.lede{font-size:1.1rem; color:var(--ink-soft); max-width:38rem; margin:0 0 1.6rem}
-.livelinks{margin:.2rem 0 0; font-size:.92rem}
-.link{color:var(--ink); font-weight:700}
-.coll{font-size:.74rem; letter-spacing:.16em; text-transform:uppercase; color:var(--faint); font-weight:700;
-  border-top:1px solid var(--rule); border-bottom:1px solid var(--rule); padding:.8rem 0; margin:0}
+.masthead{padding-top:clamp(2.75rem,9vw,5rem); padding-bottom:.5rem}
+.kicker{font-size:.95rem; font-weight:700; color:var(--clay-ink); margin:0 0 1.1rem}
+.masthead h1{font-family:var(--serif); font-weight:600; color:var(--ink);
+  font-size:clamp(2.05rem,7vw,3.6rem); line-height:1.06; letter-spacing:-.01em;
+  margin:0 0 1rem; text-wrap:balance}
+.lede{font-size:1.2rem; line-height:1.5; color:var(--ink-soft); max-width:34rem; margin:0 0 1.4rem; text-wrap:pretty}
+.livelinks{display:flex; flex-wrap:wrap; gap:.6rem; margin:.5rem 0 0}
+.sep{color:var(--faint); margin:0 .55rem}
+/* contents / programme front matter */
+.contents{margin:2.4rem 0 0; padding-top:1.6rem; border-top:1px solid var(--hairline)}
+.contents h2{font-family:var(--serif); font-weight:600; font-size:1.2rem; margin:0 0 .4rem}
+.toc{display:flex; flex-direction:column}
+.toc-row{display:grid; grid-template-columns:2.3rem minmax(0,1fr) auto; gap:.15rem .85rem; align-items:baseline;
+  text-decoration:none; color:var(--ink); padding:.62rem 0; border-top:1px solid var(--hairline-soft)}
+.toc-row:first-child{border-top:0}
+.toc-num{font-family:var(--serif); font-weight:600; color:var(--faint); font-variant-numeric:tabular-nums}
+.toc-title{min-width:0; line-height:1.35}
+.toc-row:hover .toc-title,.toc-row:focus-visible .toc-title{color:var(--clay-ink)}
+.toc-kind{color:var(--faint); font-size:.85rem; white-space:nowrap}
 
-/* browse-by-kind */
-.browse{display:flex; align-items:center; gap:.5rem; flex-wrap:wrap; margin:1.4rem 0 0}
-.browse-label{font-size:.74rem; letter-spacing:.14em; text-transform:uppercase; color:var(--faint); font-weight:700; margin-right:.3rem}
-.ftag{font:inherit; font-size:.82rem; font-weight:700; cursor:pointer; background:transparent; color:var(--ink-soft);
-  border:1px solid var(--rule); border-radius:2px; padding:.3rem .6rem; display:inline-flex; align-items:center; gap:.4rem;
+/* filter strip (browse by kind) */
+.filter{display:flex; flex-wrap:wrap; align-items:center; gap:.5rem; margin:2.6rem 0 0}
+.filter-label{font-size:.85rem; color:var(--faint); font-weight:700; margin-right:.25rem}
+.ftag{font:inherit; font-size:.95rem; font-weight:700; cursor:pointer; background:transparent; color:var(--ink-soft);
+  border:1px solid var(--hairline); border-radius:7px; padding:.4rem .8rem; min-height:40px;
   transition:color .15s,border-color .15s,background .15s}
-.ftag .swatch{width:.62rem; height:.62rem; background:var(--k); border-radius:1px; flex:0 0 auto}
-.ftag .ct{color:var(--faint); font-variant-numeric:tabular-nums}
 .ftag:hover{border-color:var(--ink-soft); color:var(--ink)}
-.ftag.is-on{background:var(--ink); color:var(--paper); border-color:var(--ink)}
-.ftag.is-on .ct{color:oklch(0.78 0.02 80)}
-.ftag[data-filter="all"] .swatch{display:none}
-.ftag-mine{margin-left:.4rem}
+.ftag.is-on{background:var(--clay); color:var(--on-clay); border-color:var(--clay)}
+.ftag .ct{opacity:.72; font-variant-numeric:tabular-nums}
 
-/* catalogue */
-.feed{margin-top:.5rem}
-.entry{display:grid; grid-template-columns:8.5rem 1fr; gap:0 2.2rem;
-  border-top:1px solid var(--rule); padding:2.2rem 0; transition:background .2s ease}
-.entry[data-chosen]{background:linear-gradient(90deg, oklch(0.95 0.02 80) 0%, transparent 60%)}
+/* feed */
+.feed{margin-top:1rem}
+.entry{padding:clamp(2.1rem,5.5vw,3.2rem) 0; border-top:1px solid var(--hairline)}
+.kind{font-size:.85rem; font-weight:700; color:var(--clay-ink); margin:0 0 .5rem}
+.title{font-family:var(--serif); font-weight:600; color:var(--ink);
+  font-size:clamp(1.5rem,3.8vw,2.15rem); line-height:1.16; letter-spacing:-.005em;
+  margin:0 0 1rem; text-wrap:balance; max-width:26ch}
+.framing{margin:0 0 .5rem; color:var(--ink); max-width:var(--measure)}
 
-.gutter{display:flex; flex-direction:column; gap:.9rem; align-items:flex-start}
-.acc{font-family:"Bitter",serif; font-weight:600; font-size:1.7rem; color:var(--faint); line-height:1;
-  font-variant-numeric:tabular-nums; transition:color .15s}
-.entry[data-chosen] .acc{color:var(--ink)}
-.tag{display:inline-flex; align-items:center; gap:.45rem; font-size:.72rem; letter-spacing:.13em; text-transform:uppercase; font-weight:700; color:var(--ink)}
-.tag .swatch{width:.66rem; height:.66rem; background:var(--k); border-radius:1px; flex:0 0 auto}
-.join{font:inherit; font-size:.78rem; font-weight:700; cursor:pointer; text-align:left; width:100%;
-  background:transparent; color:var(--ink); border:1px solid var(--ink-soft); border-radius:2px; padding:.4rem .6rem;
-  display:inline-flex; align-items:center; gap:.4rem; transition:background .12s,color .12s,border-color .12s}
-.join::before{content:"+"; font-weight:700; opacity:.7}
-.join:hover{border-color:var(--ink)}
-.join.on{background:var(--ink); color:var(--paper); border-color:var(--ink)}
-.join.on::before{content:"\\2713"; opacity:1}
-.enter{font:inherit; font-size:.8rem; font-weight:700; text-decoration:none; color:var(--paper);
-  background:var(--ink); border:1px solid var(--ink); border-radius:2px; padding:.4rem .6rem; text-align:center}
-.enter:hover{opacity:.85}
+.section{margin:1.6rem 0 0}
+.section-label{font-size:.85rem; font-weight:700; color:var(--clay-ink); margin:0 0 .75rem}
 
-.body{min-width:0}
-.title{font-family:"Bitter",Georgia,serif; font-weight:600; font-size:clamp(1.35rem,2.7vw,1.85rem); line-height:1.18; letter-spacing:-.005em; margin:.1rem 0 .9rem}
-.desc{margin:0 0 1.5rem; color:var(--ink); max-width:60ch}
-.sub{margin:1.2rem 0 0}
-.sublabel{font-size:.7rem; letter-spacing:.15em; text-transform:uppercase; color:var(--faint); font-weight:700; margin:0 0 .6rem}
-ul,ol{margin:0; padding:0; list-style:none}
+.quotes{display:flex; flex-direction:column; gap:1.05rem; max-width:var(--measure)}
+.quote{margin:0}
+.quote .q{font-family:var(--serif); font-style:italic; font-size:1.0625rem; line-height:1.5; color:var(--ink)}
+.quote .who{display:block; margin-top:.3rem; font-size:.85rem; font-weight:700; color:var(--clay-ink)}
 
-.annot li{font-family:"Bitter",serif; font-style:italic; font-size:1rem; line-height:1.5; color:var(--ink-soft);
-  padding-left:1.2em; text-indent:-1.2em; margin:0 0 .55rem; max-width:62ch}
-.annot li::before{content:"\\2014\\00a0"; color:var(--faint); font-style:normal}
+.people{display:flex; flex-direction:column; gap:.7rem; max-width:var(--measure)}
+.person{margin:0}
+.person .nm{font-weight:700; color:var(--ink)}
+.person .why{color:var(--ink-soft)}
 
-.people li{margin:0 0 .5rem; max-width:60ch}
-.people .nm{font-weight:700}
-.people .why{color:var(--ink-soft)}
+.absent{display:flex; flex-direction:column; gap:.5rem; max-width:var(--measure)}
+.arow{margin:0; padding-left:1.4em; text-indent:-1.4em; color:var(--ink-soft)}
+.arow::before{content:"+"; color:var(--clay); font-weight:700; margin-right:.55em}
 
-.absent li{color:var(--ink-soft); padding-left:1.2em; text-indent:-1.2em; margin:0 0 .45rem; max-width:60ch}
-.absent li::before{content:"+\\00a0"; color:var(--k); font-weight:700}
+/* detail accordion (native <details>) */
+.more{margin:1.3rem 0 0; border-top:1px solid var(--hairline-soft)}
+.more>summary{list-style:none; cursor:pointer; display:flex; align-items:center; gap:.55rem;
+  padding:.9rem 0; font-weight:700; font-size:.95rem; color:var(--clay-ink); min-height:44px}
+.more>summary::-webkit-details-marker{display:none}
+.more>summary::before{content:"+"; color:var(--clay); font-weight:700; font-size:1.15em; line-height:1; width:1em; text-align:center}
+.more[open]>summary::before{content:"\\2212"}
+.more>summary:hover{color:var(--clay)}
+.more-body{padding:.1rem 0 .5rem}
+.more-body .section:first-child{margin-top:.4rem}
 
-/* field-log footer (export) */
-.fieldlog{position:sticky; bottom:0; z-index:6; margin:2.5rem -1rem 0; padding:.85rem 1rem;
-  background:var(--paper); border-top:1px solid var(--ink-soft);
-  display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap}
-.tally{font-size:.85rem; color:var(--ink-soft); font-weight:700; letter-spacing:.04em; font-variant-numeric:tabular-nums}
-.logbtns{display:flex; gap:.5rem; flex-wrap:wrap}
-.logbtn{font:inherit; font-size:.84rem; font-weight:700; cursor:pointer; border-radius:2px; padding:.5rem .9rem;
-  background:var(--ink); color:var(--paper); border:1px solid var(--ink); transition:opacity .15s}
-.logbtn.ghost{background:transparent; color:var(--ink); border-color:var(--ink-soft)}
-.logbtn:hover{opacity:.85}
+/* buttons */
+.btn{font:inherit; font-size:1.0625rem; font-weight:700; cursor:pointer; text-decoration:none;
+  display:inline-flex; align-items:center; justify-content:center; gap:.45rem;
+  border-radius:8px; padding:.7rem 1.15rem; min-height:44px; border:1px solid transparent;
+  transition:background .15s,border-color .15s,color .15s}
+.btn .arr{transition:transform .2s ease}
+.btn:hover .arr,.btn:focus-visible .arr{transform:translateX(3px)}
+.btn--primary{background:var(--clay); color:var(--on-clay); border-color:var(--clay)}
+.btn--primary:hover,.btn--primary:focus-visible{background:var(--clay-deep); border-color:var(--clay-deep); color:var(--on-clay)}
+.btn--quiet{background:transparent; color:var(--clay-ink); border-color:var(--hairline)}
+.btn--quiet:hover,.btn--quiet:focus-visible{border-color:var(--clay-ink); color:var(--clay)}
+.btn--sm{font-size:.95rem; padding:.55rem .9rem; min-height:40px}
 
-/* editor's notes */
-.editor{margin-top:3rem; background:var(--sheet); border:1px solid var(--rule); border-radius:3px; padding:clamp(1.4rem,4vw,2.2rem)}
-.editor h2{font-family:"Bitter",serif; font-weight:600; font-size:1.4rem; margin:0 0 .9rem}
-.editor .sublabel{margin-bottom:1.1rem}
-.note-intro{color:var(--ink-soft); margin:0 0 1.1rem}
-.notelist{counter-reset:n; display:flex; flex-direction:column; gap:.8rem}
-.notelist li{position:relative; padding-left:2rem; color:var(--ink-soft); font-size:.96rem; line-height:1.5}
+/* per-entry action */
+.actions{margin:1.4rem 0 0}
+
+/* how this set was made */
+.notes{margin-top:3.6rem; background:var(--raised); border:1px solid var(--hairline-soft);
+  border-radius:12px; padding:clamp(1.4rem,4vw,2.3rem)}
+.notes h2{font-family:var(--serif); font-weight:600; font-size:1.4rem; margin:0 0 .9rem}
+.notes .lead{color:var(--ink-soft); margin:0 0 1.3rem; max-width:var(--measure)}
+.notelist{counter-reset:n; display:flex; flex-direction:column; gap:.95rem; margin:0; padding:0; list-style:none}
+.notelist li{position:relative; padding-left:2.3rem; color:var(--ink-soft); line-height:1.55; max-width:var(--measure)}
 .notelist li::before{counter-increment:n; content:counter(n,decimal-leading-zero);
-  position:absolute; left:0; top:.05rem; font-family:"Bitter",serif; font-weight:600; font-size:.85rem; color:var(--faint); font-variant-numeric:tabular-nums}
+  position:absolute; left:0; top:.05rem; font-family:var(--serif); font-weight:600; color:var(--clay);
+  font-variant-numeric:tabular-nums}
 
-footer{margin-top:2.5rem; color:var(--faint); font-size:.84rem; line-height:1.5; border-top:1px solid var(--rule); padding-top:1.4rem}
+.colophon{margin-top:3rem; color:var(--faint); font-size:.85rem; line-height:1.55;
+  border-top:1px solid var(--hairline-soft); padding-top:1.4rem; max-width:var(--measure)}
 
-.is-hidden{display:none}
-:focus-visible{outline:2px solid var(--ink); outline-offset:3px; border-radius:2px}
-.toast{position:fixed; left:50%; bottom:5.5rem; transform:translateX(-50%) translateY(.8rem); opacity:0;
-  transition:opacity .2s,transform .2s; background:var(--ink); color:var(--paper); padding:.6rem 1rem;
-  border-radius:3px; font-size:.85rem; font-weight:700; pointer-events:none; z-index:30}
-.toast.show{opacity:1; transform:translateX(-50%)}
-
-@media (max-width:640px){
-  body{font-size:16px}
-  .entry{grid-template-columns:1fr; gap:1rem 0}
-  .entry[data-chosen]{background:linear-gradient(180deg, oklch(0.95 0.02 80) 0%, transparent 30%)}
-  .gutter{flex-direction:row; flex-wrap:wrap; align-items:center; gap:.7rem}
-  .acc{font-size:1.3rem}
-  .join{width:auto; margin-left:auto}
+@media (max-width:520px){
+  .toc-row{grid-template-columns:2rem minmax(0,1fr)}
+  .toc-kind{grid-column:2; margin-top:.1rem}
 }
-@media (prefers-reduced-motion:reduce){ html{scroll-behavior:auto} *{transition:none !important} }
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *{transition:none !important; animation:none !important}
+}
 """
 
 JS = r"""
 (function(){
-  var KEY='hd-picks-2026-06-27';
-  var state={};
-  try{ state=JSON.parse(localStorage.getItem(KEY)||'{}'); }catch(e){ state={}; }
-  var cards=[].slice.call(document.querySelectorAll('.entry'));
-
-  function save(){ try{ localStorage.setItem(KEY,JSON.stringify(state)); }catch(e){} }
-  function chosenCount(){ return cards.filter(function(c){return c.dataset.chosen;}).length; }
-  function refresh(){
-    var n=chosenCount();
-    document.getElementById('tally').textContent = n ? (n+' of '+cards.length+' on your list') : 'Nothing on your list yet';
-    document.getElementById('mineCt').textContent = n;
-    var mine=document.querySelector('.ftag-mine');
-    if(mine.classList.contains('is-on')) applyFilter('mine');
-  }
-  function applyFilter(f){
-    cards.forEach(function(c){
-      var show = f==='all' || (f==='mine' ? !!c.dataset.chosen : c.dataset.type===f);
-      c.classList.toggle('is-hidden', !show);
-    });
-  }
-
   var ftags=[].slice.call(document.querySelectorAll('.ftag'));
+  var cards=[].slice.call(document.querySelectorAll('.entry'));
   ftags.forEach(function(b){
     b.addEventListener('click',function(){
-      ftags.forEach(function(x){var on=x===b;x.classList.toggle('is-on',on);x.setAttribute('aria-pressed',on);});
-      applyFilter(b.dataset.filter);
+      ftags.forEach(function(x){var on=x===b; x.classList.toggle('is-on',on); x.setAttribute('aria-pressed',on);});
+      var f=b.dataset.filter;
+      cards.forEach(function(c){ c.classList.toggle('is-hidden', !(f==='all'||c.dataset.type===f)); });
     });
-  });
-
-  cards.forEach(function(card){
-    var id=card.id;
-    var st=state[id]||(state[id]={chosen:false});
-    var join=card.querySelector('.join');
-    var label=join.querySelector('.jl');
-    function paint(){
-      if(st.chosen){ card.dataset.chosen='1'; join.classList.add('on'); join.setAttribute('aria-pressed','true'); label.textContent='On my list'; }
-      else { delete card.dataset.chosen; join.classList.remove('on'); join.setAttribute('aria-pressed','false'); label.textContent='Add to my list'; }
-    }
-    paint();
-    join.addEventListener('click',function(){ st.chosen=!st.chosen; paint(); save(); refresh(); });
-  });
-  refresh();
-
-  function picks(){
-    return cards.filter(function(c){return c.dataset.chosen;}).map(function(c){
-      return { title:c.querySelector('.title').textContent.trim(), type:c.dataset.type, room:c.dataset.room||'' };
-    });
-  }
-  function asMarkdown(p){
-    var s='# My conversations - Hybrid Dialogue\n\n';
-    p.forEach(function(it){ s+='- **'+it.title+'**'+(it.room?'  '+it.room:'')+'\n'; });
-    return s;
-  }
-  function asMessage(p){
-    var s="I'd like to join "+p.length+" of the conversations:\n";
-    p.forEach(function(it,i){ s+=(i+1)+'. '+it.title+(it.room?' - '+it.room:'')+'\n'; });
-    return s.trim();
-  }
-
-  var toastEl=document.getElementById('toast'), tt;
-  function toast(m){ toastEl.textContent=m; toastEl.classList.add('show'); clearTimeout(tt); tt=setTimeout(function(){toastEl.classList.remove('show');},1900); }
-  function copy(text,msg){
-    function fb(){ var ta=document.createElement('textarea'); ta.value=text; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(e){} document.body.removeChild(ta); }
-    if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(text).then(function(){toast(msg);},function(){fb();toast(msg);}); }
-    else { fb(); toast(msg); }
-  }
-  document.getElementById('copyList').addEventListener('click',function(){
-    var p=picks(); if(!p.length){ toast('Add a conversation to your list first'); return; }
-    copy(asMarkdown(p),'Your list copied');
-  });
-  document.getElementById('copyMsg').addEventListener('click',function(){
-    var p=picks(); if(!p.length){ toast('Add a conversation to your list first'); return; }
-    copy(asMessage(p),'Copied as a message to share');
   });
 })();
 """
@@ -323,7 +325,7 @@ JS = r"""
 def build(data, model, date_str, room_urls=None, base=""):
     room_urls = room_urls or {}
     invs = data.get("invitations", [])
-    browse_html, kinds = render_browse(invs)
+    filter_html, _ = render_filter(invs)
     try:
         nice_date = datetime.datetime.strptime(date_str, "%Y-%m-%d").strftime("%-d %B %Y")
     except ValueError:
@@ -331,14 +333,13 @@ def build(data, model, date_str, room_urls=None, base=""):
             nice_date = datetime.datetime.strptime(date_str, "%Y-%m-%d").strftime("%#d %B %Y")
         except ValueError:
             nice_date = date_str
-    coll = (f"{word(len(invs))} entries &middot; sixteen contributors &middot; "
-            f"{word(kinds)} kinds &middot; {e(nice_date)}")
     live_links = (
-        f'<p class="livelinks">'
-        f'<a class="link" href="{e(base)}/" target="_blank" rel="noopener">See all live conversations &rarr;</a>'
-        f' &nbsp;&middot;&nbsp; '
-        f'<a class="link" href="{e(base)}/create" target="_blank" rel="noopener">Propose another conversation &rarr;</a>'
-        f'</p>'
+        f'<div class="livelinks">'
+        f'<a class="btn btn--quiet btn--sm" href="{e(base)}/" target="_blank" rel="noopener">'
+        f'See all live conversations <span class="arr" aria-hidden="true">&rarr;</span></a>'
+        f'<a class="btn btn--quiet btn--sm" href="{e(base)}/create" target="_blank" rel="noopener">'
+        f'Propose another conversation <span class="arr" aria-hidden="true">&rarr;</span></a>'
+        f'</div>'
     ) if base else ""
     return """<!doctype html>
 <html lang="en">
@@ -346,50 +347,47 @@ def build(data, model, date_str, room_urls=None, base=""):
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<title>Hybrid Dialogue &middot; a field catalogue of conversations</title>
+<title>Hybrid Dialogue &middot; six conversations</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
 <style>""" + CSS + """</style>
 </head>
 <body>
-<div class="wrap">
+<div class="page">
   <header class="masthead">
-    <p class="kicker">Hybrid Dialogue &middot; a field catalogue</p>
-    <h1>Six conversations,<br>drawn from sixteen voices</h1>
-    <p class="lede">A starting set, gathered from the survey. Each is grown from what people actually wrote, with who might join and who's not yet here. Mark the ones that pull you, and copy your list to share.</p>
+    <p class="kicker">Hybrid Dialogue &middot; a programme of conversations</p>
+    <h1>Six conversations, drawn from sixteen voices</h1>
+    <p class="lede">A starting set, gathered from the survey. Each one grew from what people actually wrote. Read the framing, open the detail if you want it, and join the ones that pull you.</p>
     """ + live_links + """
-    <p class="coll">""" + coll + """</p>
-    <div class="browse">
-      <span class="browse-label">Browse</span>
-        """ + browse_html + """
-    </div>
   </header>
+
+  <nav class="contents" aria-label="Contents">
+    <h2>Contents</h2>
+    <div class="toc">
+        """ + render_contents(invs) + """
+    </div>
+  </nav>
+
+  <div class="filter" role="group" aria-label="Filter conversations by kind">
+    <span class="filter-label">Show</span>
+        """ + filter_html + """
+  </div>
 
   <main class="feed">
 """ + render_entries(invs, room_urls) + """
   </main>
 
-  <div class="fieldlog">
-    <span class="tally" id="tally"></span>
-    <div class="logbtns">
-      <button class="logbtn" id="copyList">Copy my list</button>
-      <button class="logbtn ghost" id="copyMsg">Copy as message</button>
-    </div>
-  </div>
-
-  <section class="editor" aria-label="Notes on how this set was made">
-    <h2>From the field notes</h2>
-    <p class="sublabel">How this set was put together</p>
+  <section class="notes" aria-label="How this set was made">
+    <h2>How this set was made</h2>
     """ + render_notes(data.get("notes_for_curation", "")) + """
   </section>
 
-  <footer>
+  <footer class="colophon">
     Gathered from sixteen survey responses with """ + e(model) + """ on """ + e(nice_date) + """.
     Claude read the responses and grouped them into a starting set; the choices are yours.
   </footer>
 </div>
-<div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script>""" + JS + """</script>
 </body>
 </html>
