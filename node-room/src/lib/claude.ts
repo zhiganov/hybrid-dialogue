@@ -121,5 +121,8 @@ function textOf(message: Anthropic.Message): string {
     .filter((b): b is Anthropic.TextBlock => b.type === "text")
     .map((b) => b.text)
     .join("")
+    // Enforce the STANCE no-em-dash rule in code; models (Haiku especially) slip.
+    .replace(/\s*[—–]\s*/g, ", ")
+    .replace(/,\s*,/g, ",")
     .trim();
 }
