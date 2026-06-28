@@ -1,5 +1,6 @@
 import "./globals.css";
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Atkinson_Hyperlegible } from "next/font/google";
 
 const atkinson = Atkinson_Hyperlegible({
@@ -19,7 +20,27 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={atkinson.variable}>
-      <body>{children}</body>
+      <body>
+        <header className="site-header">
+          <div className="site-header-in">
+            <Link className="site-name" href="/">
+              Hybrid Dialogue
+            </Link>
+            <nav className="site-nav" aria-label="Main">
+              <Link className="nav-link" href="/about">
+                About
+              </Link>
+              <Link className="nav-link" href="/transparency">
+                Under the hood
+              </Link>
+              <Link className="nav-cta" href="/create">
+                Start a conversation
+              </Link>
+            </nav>
+          </div>
+        </header>
+        {children}
+      </body>
     </html>
   );
 }

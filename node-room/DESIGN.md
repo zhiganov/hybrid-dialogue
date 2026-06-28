@@ -32,7 +32,7 @@ Tag pigments (low chroma, distinct but calm; the tag WORD carries the meaning, c
 --tag-synthesis: oklch(0.48 0.07 305);  bg oklch(0.96 0.02 305)   /* plum */
 ```
 
-Accent discipline (60-30-10 by visual weight): paper + reading type ~60-30; clay only on the one primary action per view, the active tag, Claude's voice, focus rings, and links. Never decorative.
+Accent discipline (60-30-10 by visual weight): paper + reading type ~60-30; clay only on the one primary action per view, the active tag, Claude's voice, focus rings, and inline text links in prose (not lists of headings, e.g. lobby room titles are ink with a hover underline). Never decorative.
 
 ## Typography
 
@@ -58,6 +58,7 @@ Fixed rem scale (product), ratio ~1.25:
 
 ## Layout
 
+- **Site header**: a slim, quiet bar on every page (paper, hairline bottom border, inner content aligned to the reading column). The `Hybrid Dialogue` wordmark links home; quiet `About` and `Under the hood` links; one clay `Start a conversation` action. Global navigation that recedes, not a toolbar, no sidebar.
 - One centered reading column, `max-width: 64ch`, generous page padding, mobile-first (the column is already the mobile layout; padding tightens at narrow widths). No sidebars, no cards-per-message, no metric tiles.
 - **Thread**: a list of typographic entries. Each entry: a quiet meta line (author, middot, relative time, tag chip) then the body in reading type. Entries separated by `--space-8` and a hairline; not boxes.
 - **Claude weave entry**: full-column soft `--clay-tint` band with a small clay diamond mark and a clay-ink "weave" label. Distinct and present, never louder than people.
@@ -73,7 +74,8 @@ Every interactive element ships default / hover / focus-visible / active / disab
 - **Button** `.btn`: `.btn--primary` (clay fill, `--paper-on-clay` text), `.btn--quiet` (paper-raised, ink, hairline border). Hover darkens ~4% L; focus-visible clay ring (2px, offset); disabled drops to ink-soft on paper-raised with no clay.
 - **Tag chip** `.tag` + `.tag--{kind}`: tinted bg, hued text, the word.
 - **Field** `.field` (label above, input/textarea on paper-raised, hairline, clay focus ring).
-- **Link** `.link`: clay-ink, underline on hover/focus.
+- **Link** `.link`: clay-ink, underline on hover/focus. **Room link** `.room-link`: ink lobby title, hover underline in clay (titles are not clay). **Inline code** `.code`: model identifiers.
+- **Header nav** `.site-header`: quiet global bar. `.site-name` (ink wordmark, links home), `.nav-link` (ink-soft quiet links), `.nav-cta` (small clay-fill "Start a conversation").
 - **States covered**: pre-join, empty thread (opening frame + gentle first-contribution prompt), default, posting (button busy, disabled), post error (quiet inline message, draft preserved), polled arrival (gentle), harvest none/generating/draft/finalized, export gated until a harvest exists with a plain reason, form submitting/success.
 
 ## Motion
