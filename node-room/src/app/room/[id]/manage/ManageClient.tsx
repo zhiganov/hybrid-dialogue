@@ -147,7 +147,7 @@ export function ManageClient(props: { roomId: string; nodeTitle: string; listed:
           <button className="btn btn--primary" onClick={weaveNow} disabled={busy !== null}>
             {busy === "weave" ? "Weaving" : "Weave now"}
           </button>
-          {weaveNote ? <span className="status status--done">{weaveNote}</span> : null}
+          {weaveNote ? <span className="status status--done">&#10003; {weaveNote}</span> : null}
         </div>
       </section>
 
@@ -188,7 +188,7 @@ export function ManageClient(props: { roomId: string; nodeTitle: string; listed:
           >
             Finalize
           </button>
-          {finalized ? <span className="status status--done">Finalized</span> : null}
+          {finalized ? <span className="status status--done">&#10003; Finalized</span> : null}
         </div>
       </section>
 

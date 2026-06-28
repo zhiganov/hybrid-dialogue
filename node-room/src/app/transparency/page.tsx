@@ -30,7 +30,7 @@ export default function Transparency() {
             <span className="entry-dot" aria-hidden="true">
               &middot;
             </span>
-            <span>{MODELS[r.key]}</span>
+            <code className="code">{MODELS[r.key]}</code>
             <span className="entry-dot" aria-hidden="true">
               &middot;
             </span>

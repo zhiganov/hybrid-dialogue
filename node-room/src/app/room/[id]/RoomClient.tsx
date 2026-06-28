@@ -125,6 +125,7 @@ export function RoomClient(props: {
     return (
       <main className="welcome">
         <div className="page-head">
+          <a className="crumb" href="/">Hybrid Dialogue</a>
           <h1 className="title">{props.nodeTitle}</h1>
           <p className="lede">{props.nodeDescription}</p>
         </div>
@@ -163,6 +164,7 @@ export function RoomClient(props: {
   return (
     <main className="page">
       <header className="page-head">
+        <a className="crumb" href="/">Hybrid Dialogue</a>
         <h1 className="title">{props.nodeTitle}</h1>
         <p className="lede">{props.nodeDescription}</p>
       </header>

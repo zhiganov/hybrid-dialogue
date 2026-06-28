@@ -338,6 +338,35 @@ textarea::placeholder {
 .link:focus-visible {
   text-decoration: underline;
 }
+.room-link {
+  color: var(--ink);
+  text-decoration: none;
+}
+.room-link:hover,
+.room-link:focus-visible {
+  text-decoration: underline;
+  text-decoration-color: var(--clay-ink);
+  text-underline-offset: 2px;
+}
+.crumb {
+  font-size: var(--text-sm);
+  color: var(--ink-soft);
+  text-decoration: none;
+}
+.crumb:hover,
+.crumb:focus-visible {
+  color: var(--clay-ink);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.code {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: var(--text-sm);
+  background: var(--paper-raised);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-sm);
+  padding: 0.05em 0.4em;
+}
 
 /* ---- Welcome / centered states ---- */
 .welcome {

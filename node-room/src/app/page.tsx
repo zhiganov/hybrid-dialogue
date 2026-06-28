@@ -42,7 +42,7 @@ export default async function Home() {
                 <span>{timeAgo(r.lastActivityAt)}</span>
               </p>
               <h2 className="section-title">
-                <Link className="link" href={`/room/${r.id}`}>
+                <Link className="room-link" href={`/room/${r.id}`}>
                   {r.nodeTitle}
                 </Link>
               </h2>
