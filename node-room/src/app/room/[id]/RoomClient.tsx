@@ -128,6 +128,17 @@ export function RoomClient(props: {
           <h1 className="title">{props.nodeTitle}</h1>
           <p className="lede">{props.nodeDescription}</p>
         </div>
+        <section className="howto">
+          <p className="field-label">How this works</p>
+          <p className="field-hint">
+            This is a slow conversation, not a chat. Read what others have written, add
+            one considered thought, and come back over the next few days.
+          </p>
+          <p className="field-hint">
+            Claude weaves the threads together as the conversation grows; a facilitator
+            gathers it into a harvest at the end.
+          </p>
+        </section>
         <form className="field" onSubmit={join}>
           <label className="field-label" htmlFor="name">
             Your name
@@ -137,7 +148,6 @@ export function RoomClient(props: {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="How you want to appear in the room"
-            autoFocus
             required
           />
           <p className="field-hint">
@@ -226,6 +236,9 @@ export function RoomClient(props: {
             rows={3}
             required
           />
+          <p className="field-hint">
+            Take your time. One considered thought is plenty, and you can come back over days.
+          </p>
         </div>
         <div className="composer-row">
           <span className="composer-tag">

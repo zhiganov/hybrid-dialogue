@@ -115,6 +115,10 @@ export function ManageClient(props: { roomId: string; nodeTitle: string; listed:
       <header className="page-head">
         <p className="status">Facilitator view</p>
         <h1 className="title">{props.nodeTitle}</h1>
+        <p className="field-hint">
+          You convene this conversation. Weave while it is live to connect what people
+          say; harvest and export it when it is done.
+        </p>
       </header>
 
       {error ? (
