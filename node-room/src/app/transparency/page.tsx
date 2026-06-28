@@ -76,6 +76,12 @@ export default function Transparency() {
           finalize the harvest, and export it. These actions use the host&apos;s AI budget,
           so please use them considerately. A proper sign-in will replace this later.
         </p>
+        <p className="entry-body">
+          To keep that budget in check, asking for a weave or generating a harvest is rate
+          limited: each conversation can be woven up to 8 times an hour, and its harvest
+          regenerated up to 12 times an hour. It is a soft guard against runaway use, not a
+          hard spending cap.
+        </p>
         <FacilitatorToggle />
         <p className="field-hint">
           With this on, each conversation shows a &ldquo;Facilitate this conversation&rdquo; link.
