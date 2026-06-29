@@ -7,6 +7,8 @@ import {
   shouldWeave,
   WEAVE_THRESHOLD,
   buildKumuCsv,
+  validateRoomEdits,
+  ROOM_FIELD_LIMITS,
 } from "./domain";
 
 describe("tags", () => {
@@ -79,5 +81,39 @@ describe("buildKumuCsv", () => {
     const both = out.elements + out.connections;
     expect(both).not.toContain("Ana");
     expect(both).not.toContain("Rijon");
+  });
+});
+
+describe("validateRoomEdits", () => {
+  test("trims and returns only the provided editable fields", () => {
+    const r = validateRoomEdits({
+      nodeTitle: "  How AI changes facilitation  ",
+      nodeDescription: "x",
+      facilitationPrompt: "y",
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.fields).toEqual({
+        nodeTitle: "How AI changes facilitation",
+        nodeDescription: "x",
+        facilitationPrompt: "y",
+      });
+    }
+  });
+  test("ignores non-editable keys (a listed-only patch yields no fields)", () => {
+    const r = validateRoomEdits({ listed: true });
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.fields).toEqual({});
+  });
+  test("rejects an empty or whitespace field", () => {
+    expect(validateRoomEdits({ nodeTitle: "   " }).ok).toBe(false);
+    expect(validateRoomEdits({ nodeDescription: "" }).ok).toBe(false);
+  });
+  test("rejects a field over its length cap", () => {
+    const tooLong = "a".repeat(ROOM_FIELD_LIMITS.nodeTitle + 1);
+    expect(validateRoomEdits({ nodeTitle: tooLong }).ok).toBe(false);
+  });
+  test("rejects a non-string field", () => {
+    expect(validateRoomEdits({ nodeTitle: 5 }).ok).toBe(false);
   });
 });

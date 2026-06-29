@@ -32,6 +32,52 @@ export function isValidTag(value: unknown): value is ContributionTag {
   );
 }
 
+// Facilitator-editable room fields and their length caps. Used by the manage
+// UI (maxLength + disable) and validated again on the PATCH endpoint.
+export const ROOM_FIELD_LIMITS = {
+  nodeTitle: 120,
+  nodeDescription: 600,
+  facilitationPrompt: 2000,
+} as const;
+
+export type RoomEdits = {
+  nodeTitle?: string;
+  nodeDescription?: string;
+  facilitationPrompt?: string;
+};
+
+// Pure validator for a partial room edit. Only inspects the three editable
+// fields (other keys like `listed` are ignored), trims each provided value,
+// and rejects empty or oversized input. Does not strip em dashes: this is
+// facilitator-authored content, not copy we generate.
+export function validateRoomEdits(
+  input: Record<string, unknown>
+): { ok: true; fields: RoomEdits } | { ok: false; message: string } {
+  const specs: [keyof typeof ROOM_FIELD_LIMITS, string][] = [
+    ["nodeTitle", "Title"],
+    ["nodeDescription", "Description"],
+    ["facilitationPrompt", "Claude's stance"],
+  ];
+  const fields: RoomEdits = {};
+  for (const [key, label] of specs) {
+    const value = input[key];
+    if (value === undefined) continue;
+    if (typeof value !== "string") {
+      return { ok: false, message: `${label} must be text.` };
+    }
+    const trimmed = value.trim();
+    if (!trimmed) return { ok: false, message: `${label} cannot be empty.` };
+    if (trimmed.length > ROOM_FIELD_LIMITS[key]) {
+      return {
+        ok: false,
+        message: `${label} is too long (max ${ROOM_FIELD_LIMITS[key]} characters).`,
+      };
+    }
+    fields[key] = trimmed;
+  }
+  return { ok: true, fields };
+}
+
 export function generateToken(): string {
   return nanoid(); // 21 url-safe chars by default
 }

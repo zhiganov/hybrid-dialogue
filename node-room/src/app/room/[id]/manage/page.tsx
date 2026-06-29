@@ -6,5 +6,13 @@ export default async function ManagePage({ params }: { params: Promise<{ id: str
   const { id } = await params;
   const room = await getRoom(id);
   if (!room) notFound();
-  return <ManageClient roomId={room.id} nodeTitle={room.nodeTitle} listed={room.listed} />;
+  return (
+    <ManageClient
+      roomId={room.id}
+      nodeTitle={room.nodeTitle}
+      nodeDescription={room.nodeDescription}
+      facilitationPrompt={room.facilitationPrompt}
+      listed={room.listed}
+    />
+  );
 }

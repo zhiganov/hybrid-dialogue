@@ -272,3 +272,34 @@ export async function listRooms(): Promise<LobbyRoom[]> {
 export async function setRoomListed(roomId: string, listed: boolean): Promise<void> {
   await query("UPDATE rooms SET listed = $2 WHERE id = $1", [roomId, listed]);
 }
+
+// Update any subset of the editable content fields. Column names come from a
+// fixed map (never user input); values are parameterized.
+export async function updateRoom(
+  id: string,
+  fields: { nodeTitle?: string; nodeDescription?: string; facilitationPrompt?: string }
+): Promise<Room> {
+  const columns: Record<keyof typeof fields, string> = {
+    nodeTitle: "node_title",
+    nodeDescription: "node_description",
+    facilitationPrompt: "facilitation_prompt",
+  };
+  const sets: string[] = [];
+  const values: unknown[] = [id];
+  for (const key of Object.keys(columns) as (keyof typeof fields)[]) {
+    const value = fields[key];
+    if (value === undefined) continue;
+    values.push(value);
+    sets.push(`${columns[key]} = $${values.length}`);
+  }
+  if (sets.length === 0) {
+    const room = await getRoom(id);
+    if (!room) throw new Error(`room ${id} not found`);
+    return room;
+  }
+  const rows = await query<RoomRow>(
+    `UPDATE rooms SET ${sets.join(", ")} WHERE id = $1 RETURNING *`,
+    values
+  );
+  return toRoom(rows[0]);
+}
