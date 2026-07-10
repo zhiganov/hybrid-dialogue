@@ -1,12 +1,12 @@
 import type { NextRequest } from "next/server";
 import { finalizeHarvest, getAllMessages, getHarvest, saveHarvestDraft } from "@/lib/rooms";
-import { requireFacilitator } from "@/lib/facilitator";
+import { requireDesigner } from "@/lib/designer";
 import { rateLimit } from "@/lib/ratelimit";
 import { harvestDraft } from "@/lib/claude";
 
 export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
-  const gate = await requireFacilitator(req, id);
+  const gate = await requireDesigner(req, id);
   if ("error" in gate) return gate.error;
   if (!rateLimit(`harvest:${id}`, 12, 60 * 60 * 1000)) {
     return Response.json(
@@ -22,7 +22,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
 
 export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
-  const gate = await requireFacilitator(req, id);
+  const gate = await requireDesigner(req, id);
   if ("error" in gate) return gate.error;
   const { body, finalize } = (await req.json()) ?? {};
   if (typeof body !== "string") return Response.json({ error: "body is required" }, { status: 400 });
@@ -32,7 +32,7 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
 
 export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
-  const gate = await requireFacilitator(req, id);
+  const gate = await requireDesigner(req, id);
   if ("error" in gate) return gate.error;
   const harvest = await getHarvest(id);
   return Response.json({ harvest });

@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 
-const KEY = "facilitator-mode";
+const KEY = "designer-mode";
 
-export function FacilitatorToggle() {
+export function DesignerToggle() {
   const [on, setOn] = useState(false);
   useEffect(() => {
     setOn(localStorage.getItem(KEY) === "1");
@@ -18,7 +18,7 @@ export function FacilitatorToggle() {
   return (
     <label className="toggle">
       <input type="checkbox" checked={on} onChange={toggle} />
-      <span>Facilitator mode is {on ? "on" : "off"}</span>
+      <span>Conversation designer mode is {on ? "on" : "off"}</span>
     </label>
   );
 }

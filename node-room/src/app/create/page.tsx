@@ -74,9 +74,9 @@ export default function CreatePage() {
         </section>
 
         <section className="link-block">
-          <span className="field-label">Your private facilitator link</span>
+          <span className="field-label">Your private conversation designer link</span>
           <span className="field-hint">
-            This holds your facilitator key. Keep it to yourself; it lets you weave, harvest, and export.
+            This holds your conversation designer key. Keep it to yourself; it lets you weave, harvest, and export.
           </span>
           <span className="link-value">
             <code>{manage}</code>

@@ -56,10 +56,10 @@ export default function About() {
           As a conversation grows, Claude posts a <em>weave</em>: a short note that
           connects recent contributions and draws out the threads, so newcomers can find
           their way in and the arc stays legible. It happens on its own as the room
-          fills, and a facilitator can also ask for one.
+          fills, and a conversation designer can also ask for one.
         </p>
         <p className="entry-body">
-          At the end, a facilitator writes the <em>harvest</em>: a distillation of what
+          At the end, a conversation designer writes the <em>harvest</em>: a distillation of what
           the conversation produced, to carry forward. It can be exported to a shared map
           (Kumu) that carries only the anonymized shape, the themes and how they connect,
           never names or what anyone wrote.
@@ -70,7 +70,7 @@ export default function About() {
         <h2 className="section-title">Contribution kinds</h2>
         <p className="entry-body">
           When you add a thought you can mark its kind. It is optional, and it helps
-          Claude weave and the facilitator harvest:
+          Claude weave and the conversation designer harvest:
         </p>
         <ul className="kinds">
           {CONTRIBUTION_TAGS.map((t) => (

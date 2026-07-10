@@ -1,12 +1,12 @@
 import type { NextRequest } from "next/server";
 import { addMessage, getMessages } from "@/lib/rooms";
-import { requireFacilitator } from "@/lib/facilitator";
+import { requireDesigner } from "@/lib/designer";
 import { rateLimit } from "@/lib/ratelimit";
 import { weave } from "@/lib/claude";
 
 export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
-  const gate = await requireFacilitator(req, id);
+  const gate = await requireDesigner(req, id);
   if ("error" in gate) return gate.error;
   if (!rateLimit(`weave:${id}`, 8, 60 * 60 * 1000)) {
     return Response.json(

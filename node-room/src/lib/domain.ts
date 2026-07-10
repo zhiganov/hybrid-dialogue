@@ -32,8 +32,8 @@ export function isValidTag(value: unknown): value is ContributionTag {
   );
 }
 
-// Facilitator-editable room fields and their length caps. Used by the manage
-// UI (maxLength + disable) and validated again on the PATCH endpoint.
+// Conversation-designer-editable room fields and their length caps. Used by the
+// manage UI (maxLength + disable) and validated again on the PATCH endpoint.
 export const ROOM_FIELD_LIMITS = {
   nodeTitle: 120,
   nodeDescription: 600,
@@ -49,7 +49,7 @@ export type RoomEdits = {
 // Pure validator for a partial room edit. Only inspects the three editable
 // fields (other keys like `listed` are ignored), trims each provided value,
 // and rejects empty or oversized input. Does not strip em dashes: this is
-// facilitator-authored content, not copy we generate.
+// conversation-designer-authored content, not copy we generate.
 export function validateRoomEdits(
   input: Record<string, unknown>
 ): { ok: true; fields: RoomEdits } | { ok: false; message: string } {

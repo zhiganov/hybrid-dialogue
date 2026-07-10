@@ -1,12 +1,12 @@
 import type { NextRequest } from "next/server";
 import { getAllMessages, getHarvest } from "@/lib/rooms";
-import { requireFacilitator } from "@/lib/facilitator";
+import { requireDesigner } from "@/lib/designer";
 import { buildKumuCsv } from "@/lib/domain";
 import type { ContributionTag } from "@/lib/domain";
 
 export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
-  const gate = await requireFacilitator(req, id);
+  const gate = await requireDesigner(req, id);
   if ("error" in gate) return gate.error;
 
   const harvest = await getHarvest(id);

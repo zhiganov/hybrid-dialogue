@@ -1,11 +1,11 @@
 import type { NextRequest } from "next/server";
-import { requireFacilitator } from "@/lib/facilitator";
+import { requireDesigner } from "@/lib/designer";
 import { setRoomListed, updateRoom } from "@/lib/rooms";
 import { validateRoomEdits } from "@/lib/domain";
 
 export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
-  const gate = await requireFacilitator(req, id);
+  const gate = await requireDesigner(req, id);
   if ("error" in gate) return gate.error;
 
   const body = ((await req.json().catch(() => null)) ?? {}) as Record<string, unknown>;

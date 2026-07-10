@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { STANCE, MODELS, INSTRUCTIONS } from "@/lib/claude";
-import { FacilitatorToggle } from "./FacilitatorToggle";
+import { DesignerToggle } from "./DesignerToggle";
 
 const SOURCE =
   "https://github.com/zhiganov/hybrid-dialogue/blob/main/node-room/src/lib/claude.ts";
@@ -8,7 +8,7 @@ const SOURCE =
 const ROLES: { key: keyof typeof MODELS; label: string; what: string }[] = [
   { key: "openingFrame", label: "Opening frame", what: "Welcomes people when a room opens." },
   { key: "reply", label: "Reply to @claude", what: "Answers when someone writes @claude." },
-  { key: "weave", label: "Weave", what: "Connects recent contributions, on a schedule or when the facilitator asks." },
+  { key: "weave", label: "Weave", what: "Connects recent contributions, on a schedule or when the conversation designer asks." },
   { key: "harvest", label: "Harvest", what: "Distills the conversation into a draft to carry forward." },
 ];
 
@@ -70,10 +70,10 @@ export default function Transparency() {
       </section>
 
       <section className="panel">
-        <h2 className="section-title">Help facilitate</h2>
+        <h2 className="section-title">Become a conversation designer</h2>
         <p className="entry-body">
-          Anyone can step into the facilitator role: ask Claude for a weave, write and
-          finalize the harvest, and export it. These actions use the host&apos;s AI budget,
+          Anyone can step into the conversation designer role: ask Claude for a weave, write
+          and finalize the harvest, and export it. These actions use the host&apos;s AI budget,
           so please use them considerately. A proper sign-in will replace this later.
         </p>
         <p className="entry-body">
@@ -82,9 +82,9 @@ export default function Transparency() {
           regenerated up to 12 times an hour. It is a soft guard against runaway use, not a
           hard spending cap.
         </p>
-        <FacilitatorToggle />
+        <DesignerToggle />
         <p className="field-hint">
-          With this on, each conversation shows a &ldquo;Facilitate this conversation&rdquo; link.
+          With this on, each conversation shows a &ldquo;Design this conversation&rdquo; link.
         </p>
       </section>
 

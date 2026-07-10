@@ -1,5 +1,5 @@
 // Simple in-memory sliding-window rate limiter. node-room runs a single web
-// instance, so this is enough to cap cost on the open facilitator endpoints
+// instance, so this is enough to cap cost on the open conversation-designer endpoints
 // (see GitHub #6). It resets on redeploy and is not shared across instances;
 // when proper auth lands, per-user limits should replace this.
 const hits = new Map<string, number[]>();

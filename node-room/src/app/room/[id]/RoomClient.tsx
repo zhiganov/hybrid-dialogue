@@ -57,7 +57,7 @@ export function RoomClient(props: {
 
   useEffect(() => {
     setToken(localStorage.getItem(tokenKey(roomId)));
-    setFacMode(localStorage.getItem("facilitator-mode") === "1");
+    setFacMode(localStorage.getItem("designer-mode") === "1");
   }, [roomId]);
 
   const poll = useCallback(async () => {
@@ -152,7 +152,7 @@ export function RoomClient(props: {
           {facMode ? (
             <p className="field-hint">
               <a className="link" href={`/room/${roomId}/manage`}>
-                Facilitate this conversation
+                Design this conversation
               </a>
             </p>
           ) : null}
@@ -164,8 +164,8 @@ export function RoomClient(props: {
             one considered thought, and come back over the next few days.
           </p>
           <p className="field-hint">
-            Claude weaves the threads together as the conversation grows; a facilitator
-            gathers it into a harvest at the end.
+            Claude weaves the threads together as the conversation grows; a conversation
+            designer gathers it into a harvest at the end.
           </p>
         </section>
         <form className="field" onSubmit={join}>

@@ -193,7 +193,7 @@ export function ManageClient(props: {
   return (
     <main className="page">
       <header className="page-head">
-        <p className="status">Facilitator view</p>
+        <p className="status">Conversation designer view</p>
         <h1 className="title">{title}</h1>
         <p className="field-hint">
           You convene this conversation. Weave while it is live to connect what people
