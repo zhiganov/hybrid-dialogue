@@ -1,6 +1,6 @@
 # node-room transcript enrichment — design spec
 
-**Status:** design approved (brainstorm 2026-06-29), pending implementation plan.
+**Status:** design approved (brainstorm 2026-07-10); implementation plan at `2026-07-10-transcript-enrichment-plan.md`.
 **Tracks:** [hybrid-dialogue#20](https://github.com/zhiganov/hybrid-dialogue/issues/20).
 **Goal:** enrich or pre-populate a node-room conversation from the transcript of a Zoom call, so a group's live discussion can carry into the async room, done honestly: transcript-derived material reads as clearly AI-processed and distinct from a participant's own words, is anonymized, and is trivially mutable and excludable from the harvest.
 
