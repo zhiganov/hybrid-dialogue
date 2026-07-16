@@ -7,7 +7,14 @@ node_modules/
 # private source data (survey responses, voice notes — PII, never commit) and generated artifacts
 data/
 invitation-generator/output/
-*-elements-people*.csv
+# Kumu exports, wherever they land. The old `*-elements-people*.csv` rule never matched
+# anything: every real export is named "... - elements-people.csv" with a space around the
+# dash, so the pattern's literal `-elements-people` never occurred. Only `data/` was
+# protecting these. 2026-07-15: a fresh export landed in docs/ (not gitignored) in this
+# PUBLIC repo, carrying 21 people's emails, WhatsApp numbers, LinkedIn URLs and private
+# doubts. Caught before commit. Match on the stable part of the name instead.
+*elements-people*.csv
+*elements-people*.csv.csv
 
 # subagent-driven-development scratch ledger
 .superpowers/
